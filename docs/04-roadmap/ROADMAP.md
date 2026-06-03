@@ -92,7 +92,7 @@ El núcleo del sistema es el **cálculo proporcional del pago** (valor-día sobr
 ### Milestone 4: Autenticación y Acceso
 *Objetivo:* sesión del empleador y acceso de solo lectura de la empleada por enlace, con autorización por rol en la frontera.
 
-- [ ] **Epic 4.1:** Autenticación del empleador (Auth.js)
+- [/] **Epic 4.1:** Autenticación del empleador (Auth.js)
   - **Dependencias:** Epic 1.2
   - **Descripción:** Login/logout/sesión del empleador con Auth.js (email + contraseña).
   - **Reglas de negocio clave:** [RN-13 (solo empleador configura)](../01-requirements/business_requirements.md#reglas-de-negocio)
