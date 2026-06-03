@@ -58,5 +58,24 @@ Construir el layout autenticado del empleador que envuelve las rutas protegidas:
 - Nota de arquitectura: el `(employer)` route group ya está previsto en conventions.md §2 (`src/app/(employer)/` para rutas del empleador). El placeholder `src/app/page.tsx` existente se reubica dentro del grupo para quedar protegido por el guard; el destino del login (`/`) sigue siendo la misma URL.
 - Patrón de mock en tests existente: `vi.stubGlobal("fetch", fetchMock)` con respuestas `new Response(...)` (ver `src/lib/api/client.test.ts`). Para `next/navigation`: `vi.mock("next/navigation", () => ({ useRouter: () => ({ push: pushMock }) }))`. Para `next/link` en jsdom se renderiza como `<a href>` (nombre accesible = texto/`aria-label`).
 
+## Notas de operación — crear un empleador de prueba para login
+
+Para iniciar sesión y ver las páginas (chequeo visual del coordinador), crea la cuenta del empleador con el seed (single-tenant; no hay registro público — RN-13):
+
+1. Asegura `AUTH_SECRET` en `.env` (Auth.js firma la cookie de sesión). Genera uno con `npx auth secret` u `openssl rand -base64 32`. NUNCA commitear el valor real (`.env` está en `.gitignore`).
+2. Crea la cuenta de prueba (idempotente por email):
+
+   PowerShell (Windows):
+   ```
+   $env:EMPLEADOR_EMAIL = "demo@miempleadapp.co"; $env:EMPLEADOR_PASSWORD = "Demo1234!"; npm run seed:empleador
+   ```
+   bash:
+   ```
+   EMPLEADOR_EMAIL=demo@miempleadapp.co EMPLEADOR_PASSWORD='Demo1234!' npm run seed:empleador
+   ```
+3. `npm run dev` y abre `/login`. Credenciales de demo: **demo@miempleadapp.co / Demo1234!** (cámbialas; no son secretos reales). Tras iniciar sesión, la app redirige a `/` (Inicio) dentro del shell autenticado.
+
+Verificado de extremo a extremo por API: `POST /api/v1/auth/login` → 204 + cookie `authjs.session-token`; `GET /api/v1/auth/sesion` con cookie → `{autenticado:true, email}`, sin cookie → `{autenticado:false}`; `POST /api/v1/auth/logout` → 204.
+
 ---
 *Prohibido código de implementación. Solo contratos, reglas e IDs estables.*

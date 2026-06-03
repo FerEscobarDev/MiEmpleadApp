@@ -139,6 +139,10 @@ dist
 # Specture runtime state (never commit)
 .specture/state/
 
+# Artefactos de chequeo visual (Playwright MCP, capturas de pantalla del DS/páginas)
+.playwright-mcp/
+*.png
+
 /generated/prisma
 
 # SQLite database files (datos locales / volumen persistente — nunca commitear)
