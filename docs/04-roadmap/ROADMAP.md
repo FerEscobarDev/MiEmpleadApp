@@ -35,7 +35,7 @@ El núcleo del sistema es el **cálculo proporcional del pago** (valor-día sobr
 ### Milestone 1: Foundation
 *Objetivo:* tener el proyecto Next.js operativo con persistencia lista, infraestructura de lint/format/test y el cliente Prisma único.
 
-- [ ] **Epic 1.1:** Scaffolding del proyecto
+- [/] **Epic 1.1:** Scaffolding del proyecto
   - **Dependencias:** Ninguna
   - **Descripción:** Inicializar Next.js (App Router, TypeScript), Tailwind, ESLint + Prettier, Vitest + React Testing Library, estructura por feature y helper de moneda COP (`lib/currency`).
   - **Reglas de negocio clave:** [RN-16 (moneda COP)](../01-requirements/business_requirements.md#reglas-de-negocio)
