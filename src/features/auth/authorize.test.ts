@@ -96,7 +96,9 @@ describe("authorize — capa de autorización por rol", () => {
     expect(paraEmpleada.total).toBe(100);
 
     const paraEmpleador = stripNotas(obj, "EMPLEADOR");
-    expect(paraEmpleador.notas).toBe("privado");
+    // Para EMPLEADOR el helper conserva notas; se accede vía indexación para
+    // satisfacer el narrowing del tipo unión Omit<T,"notas"> | T (mismo aserto).
+    expect((paraEmpleador as { notas?: string }).notas).toBe("privado");
   });
 
   it("EC-2: stripNotas sobre objeto sin notas no falla", () => {
