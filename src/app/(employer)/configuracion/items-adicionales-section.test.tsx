@@ -136,8 +136,10 @@ describe("ItemsAdicionalesSection (Spec items-adicionales)", () => {
   it("AC-5: editar un item invoca actualizarItemAdicional (PUT /items-adicionales/{id})", async () => {
     render(<ItemsAdicionalesSection />);
     await screen.findByText(/Noche acompañamiento/i);
-    // Abrir el editor del primer item (botón con su nombre o un control de editar).
-    await userEvent.click(screen.getByRole("button", { name: /Noche acompañamiento/i }));
+    // Abrir el editor del primer item: el botón de editar tiene como nombre
+    // accesible EXACTAMENTE el nombre del item (anclado para no chocar con el
+    // botón "Eliminar Noche acompañamiento", que contiene el nombre como subcadena).
+    await userEvent.click(screen.getByRole("button", { name: /^Noche acompañamiento$/i }));
     const nombre = await screen.findByLabelText(/Nombre/i);
     await userEvent.clear(nombre);
     await userEvent.type(nombre, "Noche acomp. nueva");
