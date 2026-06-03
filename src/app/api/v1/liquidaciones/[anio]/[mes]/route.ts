@@ -73,7 +73,12 @@ export async function GET(
         "El mes está fuera del periodo de contrato.",
       );
     }
-    const cuerpo = stripNotas(result.liquidacion, contexto.rol);
+    // stripNotas exige un Record indexable; el DTO se ensancha en el límite para
+    // consumir el helper compartido de RN-12 sin alterar su firma (Epic 4.2).
+    const cuerpo = stripNotas(
+      result.liquidacion as unknown as Record<string, unknown>,
+      contexto.rol,
+    );
     return Response.json(cuerpo, { status: 200 });
   } catch (error) {
     console.error("Error en GET /api/v1/liquidaciones/[anio]/[mes]", error);
