@@ -28,14 +28,22 @@ export const API_BASE_URL = `${ORIGIN}/api/v1`;
 // Chrome a usar HTTP/2 (request streaming) y la negociación ALPN→h2 falla
 // contra servidores HTTP/1.1 (ERR_ALPN_NEGOTIATION_FAILED). Bufferizar el body
 // mantiene compatibilidad con HTTP/1.1 en navegadores reales.
-const dynamicFetch: typeof fetch = async (input, init) => {
+export const dynamicFetch: typeof fetch = async (input, init) => {
   if (typeof Request !== "undefined" && input instanceof Request) {
     const req = input;
     const tieneBody = req.method !== "GET" && req.method !== "HEAD";
     const body = tieneBody ? await req.arrayBuffer() : undefined;
+    // Serializamos los headers a un objeto plano. Mantener el `Headers` original
+    // funciona en runtime, pero acopla a la realm de `Headers` del entorno (en
+    // jsdom/undici la instancia puede no pasar `instanceof Headers` en otra realm);
+    // un record plano es portable y preserva el header inyectado (X-Acceso-Token).
+    const headers: Record<string, string> = {};
+    req.headers.forEach((value, key) => {
+      headers[key] = value;
+    });
     const reqInit: RequestInit = {
       method: req.method,
-      headers: req.headers,
+      headers,
       body,
       credentials: req.credentials,
       signal: req.signal,
@@ -44,6 +52,11 @@ const dynamicFetch: typeof fetch = async (input, init) => {
   }
   return globalThis.fetch(input, init);
 };
+
+// Alias para el cliente de consulta de la empleada (consulta-client.ts), que crea su
+// propio cliente tipado con el mismo transporte bufferizado pero un middleware que
+// añade el header X-Acceso-Token.
+export const consultaFetch = dynamicFetch;
 
 export const apiClient = createClient<paths>({
   baseUrl: API_BASE_URL,
