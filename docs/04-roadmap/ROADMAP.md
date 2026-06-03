@@ -54,7 +54,7 @@ El núcleo del sistema es el **cálculo proporcional del pago** (valor-día sobr
 ### Milestone 2: Dominio de Cálculo (lógica pura)
 *Objetivo:* tener el corazón del negocio —festivos y cálculo de liquidación— como funciones puras, completamente testeadas, sin IO ni HTTP.
 
-- [ ] **Epic 2.1:** Servicio de Festivos (Ley Emiliani)
+- [/] **Epic 2.1:** Servicio de Festivos (Ley Emiliani)
   - **Dependencias:** Epic 1.1
   - **Descripción:** Integrar una librería de festivos colombianos que aplique la Ley Emiliani y exponer "fechas festivas de un mes/año" en zona America/Bogotá.
   - **Reglas de negocio clave:** [RN-03 (festivos no se descuentan), RN-17 (zona horaria)](../01-requirements/business_requirements.md#reglas-de-negocio)
