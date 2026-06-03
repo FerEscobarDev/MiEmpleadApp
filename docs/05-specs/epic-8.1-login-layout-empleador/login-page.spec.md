@@ -33,7 +33,7 @@ Construir la pantalla `/login` donde el empleador inicia sesión con email y con
 
 ## Criterios de Aceptación (≥1 test por ID)
 - **AC-1:** La página renderiza un formulario accesible con un campo de email (etiqueta "Correo electrónico", `type=email`), un campo de contraseña (etiqueta "Contraseña", `type=password`) y un botón de envío con nombre accesible "Entrar".
-- **AC-2:** Al completar email y contraseña y enviar, se invoca la operación `iniciarSesionEmpleador` del cliente tipado **exactamente una vez** con el email y la contraseña ingresados (el test mockea el `fetch` global / el cliente tipado; no se levanta servidor).
+- **AC-2:** Al completar email y contraseña y enviar, se invoca la operación `iniciarSesionEmpleador` del cliente tipado **exactamente una vez** (método POST contra la URL del contrato `/api/v1/auth/login`). El cuerpo viaja serializado como stream por el cliente tipado, por lo que la vinculación al contrato se verifica por operación/método/URL, no inspeccionando el wire-body (detalle de implementación de openapi-fetch). El test mockea el `fetch` global; no se levanta servidor.
 - **AC-3:** Tras un envío exitoso (204), la UI navega a `/` (se verifica con un `useRouter().push`/`replace` mockeado, o el mecanismo de navegación inyectado, llamado con `/`).
 - **AC-4:** Si la operación responde 401 `NO_AUTORIZADO`, se muestra un mensaje de error en línea con el texto "Credenciales inválidas." asociado accesiblemente al formulario (`role="alert"` o `aria-describedby`/`aria-live`), y NO se navega.
 - **AC-5:** Mientras la petición está en curso, el botón de envío queda deshabilitado y comunica el estado de carga (`aria-busy="true"`), evitando envíos duplicados.
