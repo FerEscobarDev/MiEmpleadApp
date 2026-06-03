@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/Toaster";
+import { ServiceWorkerRegistrar } from "@/components/pwa/service-worker-registrar";
 
 // Inter como familia de UI del Design System (design_system.md §2.4), expuesta
 // como variable CSS --font-sans para que el tema de Tailwind la consuma.
@@ -42,6 +43,7 @@ export default function RootLayout({
         <ThemeProvider>
           {children}
           <Toaster />
+          <ServiceWorkerRegistrar />
         </ThemeProvider>
       </body>
     </html>

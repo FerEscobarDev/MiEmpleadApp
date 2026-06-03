@@ -1,0 +1,38 @@
+# docker-compose para MiEmpleadApp en VPS con Dokploy (Epic 9.1 / ADR-002).
+#
+# Instancia ÚNICA (sin escalado horizontal con múltiples escritores): SQLite en
+# un VOLUMEN PERSISTENTE con modo WAL (habilitado por la app en src/lib/db.ts).
+# Dokploy puede tomar este compose tal cual o inyectar las variables desde su UI.
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: miempleadapp:latest
+    restart: unless-stopped
+    # Una sola réplica: ADR-002 prohíbe múltiples escritores sobre el mismo .db.
+    deploy:
+      replicas: 1
+    ports:
+      # Puerto del host : puerto del contenedor (configurable vía PORT).
+      - "${PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      # El archivo SQLite vive DENTRO del volumen persistente (/data). Si esta ruta
+      # no cae sobre el volumen, los datos se pierden en cada redeploy (ADR-002).
+      DATABASE_URL: "file:/data/prod.db"
+      # Secreto de Auth.js (firma de la cookie de sesión del empleador).
+      AUTH_SECRET: "${AUTH_SECRET:?define AUTH_SECRET}"
+      # Detrás del reverse-proxy de Dokploy/Traefik, Auth.js confía en el host.
+      AUTH_TRUST_HOST: "true"
+      # URL pública real (dominio con HTTPS); la usan los enlaces de consulta.
+      NEXT_PUBLIC_BASE_URL: "${NEXT_PUBLIC_BASE_URL:?define NEXT_PUBLIC_BASE_URL}"
+    volumes:
+      # Named volume montado en /data: persiste prod.db (+ -wal/-shm) entre redeploys.
+      - miempleadapp-data:/data
+
+volumes:
+  miempleadapp-data:
+    name: miempleadapp-data

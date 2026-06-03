@@ -1,0 +1,41 @@
+# Contexto de build de Docker (Epic 9.1). Mantiene la imagen pequeña y evita
+# filtrar secretos o artefactos locales.
+
+# Dependencias y build de Next (se regeneran dentro de la imagen).
+node_modules
+.next
+out
+
+# Git y metadatos.
+.git
+.gitignore
+.gitattributes
+
+# Variables de entorno locales (NUNCA dentro de la imagen).
+.env
+.env.local
+.env.*.local
+
+# Bases SQLite locales (datos; viven en el volumen persistente, no en la imagen).
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+prisma/dev.db*
+
+# Artefactos de pruebas / capturas / logs.
+*.png
+*.log
+.playwright-mcp
+chl-eval
+coverage
+tsconfig.tsbuildinfo
+
+# Documentación y specs (no necesarios en runtime).
+docs
+.specture
+
+# Editor / SO.
+.vscode
+.idea
+.DS_Store

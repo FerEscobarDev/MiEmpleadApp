@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/Avatar";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { BirthdayBanner } from "@/components/domain/BirthdayBanner";
+import { OfflineIndicator } from "@/components/pwa/offline-indicator";
 import type { components } from "@/lib/api/schema";
 import { createConsultaClient, esCumpleanosHoy } from "./consulta-client";
 import { PagoTab } from "./pago-tab";
@@ -104,6 +105,7 @@ export function ConsultaView({ token, hoy = new Date() }: ConsultaViewProps) {
 
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-col gap-lg p-lg">
+      <OfflineIndicator />
       <header className="flex items-center gap-md">
         <Avatar>
           <AvatarFallback>{iniciales(empleada.nombre)}</AvatarFallback>

@@ -1,2 +1,8 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Scripts y archivos consumidos por Linux/Docker SIEMPRE con LF (un shebang con
+# CRLF rompe la ejecución del entrypoint en el contenedor).
+*.sh text eol=lf
+Dockerfile text eol=lf
+docker-entrypoint.sh text eol=lf
