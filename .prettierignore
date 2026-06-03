@@ -1,0 +1,8 @@
+.next
+node_modules
+out
+coverage
+docs
+*.md
+next-env.d.ts
+.specture
