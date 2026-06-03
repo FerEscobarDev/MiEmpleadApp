@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/Card";
 import { DesglosePanel } from "./desglose-panel";
 import { NovedadesPanel } from "./novedades-panel";
+import { CicloVidaAcciones } from "./ciclo-vida-acciones";
 
 // Sección cliente de /liquidar (Spec seleccion-y-desglose). Selecciona mes/año,
 // carga la liquidación por el cliente tipado (obtenerLiquidacion) y renderiza el
@@ -30,6 +31,9 @@ type ActualizarLiquidacionInput = components["schemas"]["ActualizarLiquidacionIn
 
 const ERROR_CARGA = "No pudimos cargar la liquidación. Intenta de nuevo.";
 const ERROR_GUARDADO = "No pudimos guardar las novedades. Intenta de nuevo.";
+const ERROR_CICLO = "No pudimos cambiar el estado de la liquidación. Intenta de nuevo.";
+const MENSAJE_CONFLICTO_ESTADO =
+  "El estado de la liquidación cambió. Recarga el mes e inténtalo de nuevo.";
 const MENSAJE_FUERA_CONTRATO =
   "Este mes está fuera del periodo de contrato, por lo que no es liquidable.";
 const MENSAJE_INASISTENCIA_INVALIDA =
@@ -180,6 +184,40 @@ export function LiquidarMesSection({ anioInicial, mesInicial }: LiquidarMesSecti
     [editable, liquidacion, actualizar],
   );
 
+  // Cierra o reabre la liquidación y refleja el nuevo estado devuelto por el backend
+  // (badge + editabilidad). Un 409 indica conflicto de estado → mensaje amable.
+  const cerrar = React.useCallback(async (): Promise<void> => {
+    if (!liquidacion) {
+      return;
+    }
+    const { data, error } = await apiClient.POST(
+      "/liquidaciones/{anio}/{mes}/cierre",
+      { params: { path: { anio: liquidacion.anio, mes: liquidacion.mes } } },
+    );
+    if (error || !data) {
+      toast.error(codigoDeError(error) ? MENSAJE_CONFLICTO_ESTADO : ERROR_CICLO);
+      return;
+    }
+    setLiquidacion(data as Liquidacion);
+    toast.success("Liquidación cerrada.");
+  }, [liquidacion]);
+
+  const reabrir = React.useCallback(async (): Promise<void> => {
+    if (!liquidacion) {
+      return;
+    }
+    const { data, error } = await apiClient.POST(
+      "/liquidaciones/{anio}/{mes}/reapertura",
+      { params: { path: { anio: liquidacion.anio, mes: liquidacion.mes } } },
+    );
+    if (error || !data) {
+      toast.error(codigoDeError(error) ? MENSAJE_CONFLICTO_ESTADO : ERROR_CICLO);
+      return;
+    }
+    setLiquidacion(data as Liquidacion);
+    toast.success("Liquidación reabierta.");
+  }, [liquidacion]);
+
   const aniosDisponibles = React.useMemo(() => {
     const base = anioInicial;
     const lista: number[] = [];
@@ -285,6 +323,14 @@ export function LiquidarMesSection({ anioInicial, mesInicial }: LiquidarMesSecti
           </Card>
 
           <DesglosePanel desglose={liquidacion.desglose} />
+
+          <CicloVidaAcciones
+            estado={liquidacion.estado}
+            anio={liquidacion.anio}
+            mes={liquidacion.mes}
+            onCerrar={cerrar}
+            onReabrir={reabrir}
+          />
 
           <NovedadesPanel
             itemsCatalogo={itemsCatalogo}
