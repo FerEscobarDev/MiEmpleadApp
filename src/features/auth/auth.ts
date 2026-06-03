@@ -9,6 +9,11 @@ import { authorizeEmpleador } from "@/features/auth/application/auth-service";
 // (SQLite, instancia única; sin tabla de sesiones). El secreto sale de AUTH_SECRET.
 
 export const { auth, handlers, signIn, signOut } = NextAuth({
+  // Auto-hospedado (Docker/Dokploy/VPS, ADR-002): Auth.js no puede verificar el
+  // host detrás del proxy, así que debemos confiar en él explícitamente. Sin esto
+  // Auth.js lanza UntrustedHost en producción y el login se rompe. También se
+  // puede fijar con AUTH_TRUST_HOST=true; lo dejamos explícito por claridad.
+  trustHost: true,
   session: { strategy: "jwt" },
   providers: [
     Credentials({
