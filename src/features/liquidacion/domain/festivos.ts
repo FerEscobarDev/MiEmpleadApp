@@ -14,9 +14,7 @@ const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 function observedHolidayDatesForYear(year: number): string[] {
   // valueAsDate: false selecciona la sobrecarga que devuelve fechas como
   // cadenas YYYY-MM-DD (ColombianHoliday), no como objetos Date.
-  return colombianHolidays({ year, valueAsDate: false }).map(
-    (holiday) => holiday.celebrationDate,
-  );
+  return colombianHolidays({ year, valueAsDate: false }).map((holiday) => holiday.celebrationDate);
 }
 
 /**
