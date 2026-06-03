@@ -73,7 +73,7 @@ El núcleo del sistema es el **cálculo proporcional del pago** (valor-día sobr
 ### Milestone 3: Configuración (API)
 *Objetivo:* backend de la ficha de la empleada, configuración y conceptos de pago adicional.
 
-- [ ] **Epic 3.1:** API Empleada y Configuración
+- [/] **Epic 3.1:** API Empleada y Configuración
   - **Dependencias:** Epic 1.2
   - **Descripción:** Ficha de la empleada (nombre, nacimiento, fechas de contrato) y configuración (salario base, días laborales). Validación Zod en la frontera.
   - **Reglas de negocio clave:** [RN-02, RN-18 (default salario), RN-13 (rol empleador), RN-20 (cumpleaños)](../01-requirements/business_requirements.md#reglas-de-negocio)
