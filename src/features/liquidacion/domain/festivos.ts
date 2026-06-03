@@ -12,7 +12,11 @@ const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 // la Ley Emiliani (el lunes trasladado). Para el negocio (RN-03) importa el dia
 // en que efectivamente no se trabaja, es decir la fecha observada.
 function observedHolidayDatesForYear(year: number): string[] {
-  return colombianHolidays({ year }).map((holiday) => holiday.celebrationDate);
+  // valueAsDate: false selecciona la sobrecarga que devuelve fechas como
+  // cadenas YYYY-MM-DD (ColombianHoliday), no como objetos Date.
+  return colombianHolidays({ year, valueAsDate: false }).map(
+    (holiday) => holiday.celebrationDate,
+  );
 }
 
 /**
