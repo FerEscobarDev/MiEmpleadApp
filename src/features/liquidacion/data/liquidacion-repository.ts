@@ -15,9 +15,7 @@ export interface CrearLiquidacionInput {
   notas?: string | null;
 }
 
-export async function crearLiquidacion(
-  input: CrearLiquidacionInput,
-): Promise<Liquidacion> {
+export async function crearLiquidacion(input: CrearLiquidacionInput): Promise<Liquidacion> {
   return db.liquidacion.create({
     data: {
       empleadaId: input.empleadaId,
@@ -40,9 +38,7 @@ export async function buscarLiquidacionPorMes(
   return liquidacion ?? undefined;
 }
 
-export async function listarLiquidacionesDeEmpleada(
-  empleadaId: string,
-): Promise<Liquidacion[]> {
+export async function listarLiquidacionesDeEmpleada(empleadaId: string): Promise<Liquidacion[]> {
   return db.liquidacion.findMany({
     where: { empleadaId },
     orderBy: [{ anio: "desc" }, { mes: "desc" }],

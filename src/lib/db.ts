@@ -12,12 +12,10 @@ function createPrismaClient(): PrismaClient {
   const client = new PrismaClient();
   // Modo WAL de SQLite (ADR-002): mejora la concurrencia lectura/escritura.
   // Se ejecuta de forma perezosa en la primera conexión; no bloquea el import.
-  void client
-    .$executeRawUnsafe("PRAGMA journal_mode=WAL;")
-    .catch(() => {
-      // En bases :memory: o entornos sin WAL el pragma puede no aplicar;
-      // no es un error de negocio y no debe tumbar el arranque.
-    });
+  void client.$executeRawUnsafe("PRAGMA journal_mode=WAL;").catch(() => {
+    // En bases :memory: o entornos sin WAL el pragma puede no aplicar;
+    // no es un error de negocio y no debe tumbar el arranque.
+  });
   return client;
 }
 
