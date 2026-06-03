@@ -1,0 +1,65 @@
+# Specture — Project Stack Configuration
+# This file is the SINGLE SOURCE OF TRUTH for the technical stack of the project.
+# All skills and agents read this file before generating code, plans, or reviews.
+# Edit through `/setup` (mode: reconfigure) to keep validation and ADRs in sync.
+
+# --- Identity --------------------------------------------------------------
+project:
+  name: "MiEmpleadApp"
+  type: "web"
+  description: "PWA full-stack para controlar el salario, dias trabajados, pagos adicionales, menus de cocina y tareas diarias de una empleada domestica en Colombia, con roles empleador/empleada."
+
+# --- Backend ---------------------------------------------------------------
+backend:
+  language: "typescript"
+  runtime: "node 20"
+  framework: "nextjs"            # Route Handlers + Server Actions (full-stack)
+  package_manager: "npm"
+  testing_framework: "vitest"
+
+# --- Database & Persistence ------------------------------------------------
+database:
+  primary: "sqlite"             # archivo .db en volumen persistente (no serverless); ver ADR-002
+  orm_or_driver: "prisma"
+  cache: "none"
+  search: "none"
+
+# --- Frontend (omit or set to null if no frontend) -------------------------
+frontend:
+  framework: "nextjs"            # App Router
+  language: "typescript"
+  ui_library: "shadcn"
+  styling: "tailwind"
+  state_management: "none"       # React Server Components + hooks/context; sin lib global por ahora
+  testing_framework: "vitest"    # + React Testing Library
+  ui_defined: false
+
+# --- API Contract (the single source of truth for the backend↔frontend interface)
+api:
+  style: "rest"                  # Next.js Route Handlers → OpenAPI
+  contract_file: "docs/02-architecture/api-contract.openapi.yaml"
+
+# --- Architecture Pattern --------------------------------------------------
+architecture:
+  pattern: "modular-monolith"
+  module_strategy: "by-feature"
+  uses_ddd: false
+  uses_cqrs: false
+  uses_event_driven: false
+
+# --- DevOps & Deployment ---------------------------------------------------
+devops:
+  containerization: "docker"
+  ci_cd: "none"
+  hosting: "self-hosted"        # VPS con Docker gestionado por Dokploy; SQLite en volumen persistente (WAL). Ver ADR-002
+
+# --- Quality Gates (read by code-reviewer agent) ---------------------------
+quality:
+  linter: "eslint"
+  formatter: "prettier"
+  type_checker: "tsc"
+  required_test_coverage_percent: 0  # 0 = not enforced
+
+# --- Conventions Pointer ---------------------------------------------------
+conventions_file: ".specture/conventions.md"
+decisions_dir: ".specture/decisions/"

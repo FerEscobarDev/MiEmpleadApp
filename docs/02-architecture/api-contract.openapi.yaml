@@ -1,0 +1,832 @@
+# Contrato de API — fuente de verdad machine-readable de MiEmpleadApp.
+# Generado en la Fase 2 (architecture) DESPUÉS de architecture.md y ANTES del ROADMAP.
+# Consumido por: specs de backend (implementan operationId), navigation_map y specs de
+# frontend (consumen operationId), y el generador de cliente tipado del frontend.
+#
+# Reglas:
+#  - Todo path lleva `operationId` único y estable.
+#  - Reusar shapes vía components/schemas.
+#  - Un envelope de error único en components/schemas/Error.
+#  - Cambiar un operationId/método/path existente = breaking change → requiere ADR.
+
+openapi: 3.1.0
+
+info:
+  title: "MiEmpleadApp API"
+  version: "0.1.0"
+  description: >
+    Contrato de la interfaz backend↔frontend de MiEmpleadApp. Fuente de verdad.
+    Roles: `empleador` (sesión Auth.js, lectura+escritura) y `empleada`
+    (token de acceso de solo lectura + marcar tareas). Montos en COP enteros.
+    Fechas en ISO-8601 (date) calculadas en zona America/Bogotá.
+
+servers:
+  - url: "/api/v1"
+    description: "Base URL bajo Next.js Route Handlers."
+
+components:
+  securitySchemes:
+    sesionEmpleador:
+      type: apiKey
+      in: cookie
+      name: "next-auth.session-token"
+      description: "Sesión del empleador gestionada por Auth.js."
+    accesoEmpleada:
+      type: apiKey
+      in: header
+      name: "X-Acceso-Token"
+      description: "Token de enlace de solo lectura de la empleada (revocable)."
+
+  schemas:
+    # Envelope de error ÚNICO para todo el contrato.
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          description: >
+            Código de negocio estable. Ej: LIQUIDACION_CERRADA, INASISTENCIA_INVALIDA,
+            MES_FUERA_DE_CONTRATO, MES_DUPLICADO, ACCESO_INVALIDO, NO_AUTORIZADO.
+        message: { type: string }
+        details: { type: object, additionalProperties: true }
+
+    DiaSemana:
+      type: string
+      enum: [LUNES, MARTES, MIERCOLES, JUEVES, VIERNES, SABADO, DOMINGO]
+
+    EstadoLiquidacion:
+      type: string
+      enum: [BORRADOR, CERRADA]
+
+    Periodicidad:
+      type: string
+      enum: [SEMANAL, QUINCENAL, MENSUAL]
+
+    TipoDiaCalendario:
+      type: string
+      enum: [TRABAJADO, INASISTENCIA, FESTIVO, NO_LABORAL, FUERA_CONTRATO]
+
+    # --- Acceso ----------------------------------------------------------
+    EnlaceAcceso:
+      type: object
+      required: [token, url, activo]
+      properties:
+        token: { type: string }
+        url: { type: string, description: "Enlace completo para compartir con la empleada." }
+        activo: { type: boolean }
+
+    ContextoEmpleada:
+      type: object
+      required: [nombre, valido]
+      properties:
+        nombre: { type: string }
+        valido: { type: boolean }
+
+    # --- Empleada / Configuración ---------------------------------------
+    Empleada:
+      type: object
+      required: [nombre, fechaNacimiento, fechaInicioContrato]
+      properties:
+        nombre: { type: string }
+        fechaNacimiento: { type: string, format: date }
+        fechaInicioContrato: { type: string, format: date }
+        fechaFinContrato: { type: string, format: date, nullable: true }
+
+    Configuracion:
+      type: object
+      required: [salarioBase, diasLaborales]
+      properties:
+        salarioBase: { type: integer, description: "COP entero. Default 700000." }
+        diasLaborales:
+          type: array
+          items: { $ref: "#/components/schemas/DiaSemana" }
+
+    # --- Items adicionales ----------------------------------------------
+    ItemAdicional:
+      type: object
+      required: [id, nombre, valorUnitario, activo]
+      properties:
+        id: { type: string }
+        nombre: { type: string }
+        valorUnitario: { type: integer, description: "COP entero." }
+        color: { type: string, nullable: true }
+        activo: { type: boolean }
+
+    ItemAdicionalInput:
+      type: object
+      required: [nombre, valorUnitario]
+      properties:
+        nombre: { type: string }
+        valorUnitario: { type: integer }
+        color: { type: string, nullable: true }
+        activo: { type: boolean, default: true }
+
+    # --- Liquidación -----------------------------------------------------
+    LiquidacionResumen:
+      type: object
+      required: [anio, mes, estado, total]
+      properties:
+        anio: { type: integer }
+        mes: { type: integer, minimum: 1, maximum: 12 }
+        estado: { $ref: "#/components/schemas/EstadoLiquidacion" }
+        total: { type: integer, description: "COP entero." }
+
+    Desglose:
+      type: object
+      required:
+        [diasLaboralesMes, festivosEnDiaLaboral, diasTrabajados, valorDia,
+         subtotalDias, subtotalItems, subtotalMontosPuntuales, total]
+      properties:
+        diasLaboralesMes: { type: integer, description: "Días laborales del mes completo (denominador)." }
+        festivosEnDiaLaboral: { type: integer, description: "Festivos L–S del mes, pagados, no descontados." }
+        diasTrabajados: { type: integer, description: "Días efectivamente trabajados (dentro de contrato, menos inasistencias)." }
+        valorDia: { type: integer }
+        subtotalDias: { type: integer }
+        subtotalItems: { type: integer }
+        subtotalMontosPuntuales: { type: integer }
+        total: { type: integer }
+
+    DiaCalendario:
+      type: object
+      required: [fecha, tipo]
+      properties:
+        fecha: { type: string, format: date }
+        tipo: { $ref: "#/components/schemas/TipoDiaCalendario" }
+        itemsAdicionales:
+          type: array
+          description: "Ids de items adicionales asociados a ese día (si aplica, para color)."
+          items: { type: string }
+
+    LiquidacionItem:
+      type: object
+      required: [itemId, nombre, valorUnitario, cantidad, subtotal]
+      properties:
+        itemId: { type: string }
+        nombre: { type: string }
+        valorUnitario: { type: integer, description: "Valor congelado en la liquidación." }
+        cantidad: { type: integer, minimum: 0 }
+        subtotal: { type: integer }
+
+    MontoPuntual:
+      type: object
+      required: [descripcion, monto]
+      properties:
+        id: { type: string }
+        descripcion: { type: string }
+        monto: { type: integer, description: "COP entero." }
+
+    Liquidacion:
+      type: object
+      required: [anio, mes, estado, desglose, calendario, inasistencias, items, montosPuntuales]
+      properties:
+        anio: { type: integer }
+        mes: { type: integer, minimum: 1, maximum: 12 }
+        estado: { $ref: "#/components/schemas/EstadoLiquidacion" }
+        desglose: { $ref: "#/components/schemas/Desglose" }
+        calendario:
+          type: array
+          items: { $ref: "#/components/schemas/DiaCalendario" }
+        inasistencias:
+          type: array
+          items: { type: string, format: date }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/LiquidacionItem" }
+        montosPuntuales:
+          type: array
+          items: { $ref: "#/components/schemas/MontoPuntual" }
+        notas:
+          type: string
+          nullable: true
+          description: "Privada del empleador. NUNCA presente en respuestas al rol empleada (RN-12)."
+
+    ActualizarLiquidacionInput:
+      type: object
+      description: "Edición del borrador del mes (novedades). Falla si la liquidación está CERRADA."
+      properties:
+        inasistencias:
+          type: array
+          items: { type: string, format: date }
+        items:
+          type: array
+          items:
+            type: object
+            required: [itemId, cantidad]
+            properties:
+              itemId: { type: string }
+              cantidad: { type: integer, minimum: 0 }
+        montosPuntuales:
+          type: array
+          items:
+            type: object
+            required: [descripcion, monto]
+            properties:
+              descripcion: { type: string }
+              monto: { type: integer }
+        notas: { type: string, nullable: true }
+
+    # --- Menú ------------------------------------------------------------
+    MenuConfig:
+      type: object
+      required: [comidas, periodicidad]
+      properties:
+        comidas:
+          type: array
+          items: { type: string }
+          description: "Comidas configurables, ej. ['Desayuno','Almuerzo','Cena']."
+        periodicidad: { $ref: "#/components/schemas/Periodicidad" }
+
+    MenuEntrada:
+      type: object
+      required: [semana, diaSemana, comida, descripcion]
+      properties:
+        semana: { type: integer, minimum: 0, description: "Índice de semana del ciclo (0 = semana 1)." }
+        diaSemana: { $ref: "#/components/schemas/DiaSemana" }
+        comida: { type: string }
+        descripcion: { type: string }
+
+    Menu:
+      type: object
+      required: [configuracion, entradas]
+      properties:
+        configuracion: { $ref: "#/components/schemas/MenuConfig" }
+        entradas:
+          type: array
+          items: { $ref: "#/components/schemas/MenuEntrada" }
+
+    # --- Tareas ----------------------------------------------------------
+    RutinaTarea:
+      type: object
+      required: [id, diaSemana, descripcion, orden]
+      properties:
+        id: { type: string }
+        diaSemana: { $ref: "#/components/schemas/DiaSemana" }
+        descripcion: { type: string }
+        horaInicio: { type: string, nullable: true, description: "HH:mm, opcional." }
+        horaFin: { type: string, nullable: true, description: "HH:mm, opcional." }
+        orden: { type: integer }
+
+    RutinaTareaInput:
+      type: object
+      required: [diaSemana, descripcion, orden]
+      properties:
+        diaSemana: { $ref: "#/components/schemas/DiaSemana" }
+        descripcion: { type: string }
+        horaInicio: { type: string, nullable: true }
+        horaFin: { type: string, nullable: true }
+        orden: { type: integer }
+
+    TareaDelDia:
+      type: object
+      required: [rutinaTareaId, descripcion, hecha]
+      properties:
+        rutinaTareaId: { type: string }
+        descripcion: { type: string }
+        horaInicio: { type: string, nullable: true }
+        horaFin: { type: string, nullable: true }
+        hecha: { type: boolean }
+
+    MarcarTareaInput:
+      type: object
+      required: [fecha, rutinaTareaId, hecha]
+      properties:
+        fecha: { type: string, format: date }
+        rutinaTareaId: { type: string }
+        hecha: { type: boolean }
+
+    CumplimientoTarea:
+      type: object
+      required: [fecha, rutinaTareaId, descripcion, hecha]
+      properties:
+        fecha: { type: string, format: date }
+        rutinaTareaId: { type: string }
+        descripcion: { type: string }
+        hecha: { type: boolean }
+
+  responses:
+    BadRequest:
+      description: Datos inválidos.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Unauthorized:
+      description: No autenticado.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Forbidden:
+      description: No autorizado para el rol.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    NotFound:
+      description: Recurso no encontrado.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Conflict:
+      description: Conflicto de estado (ej. liquidación cerrada, mes duplicado).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+
+# Por defecto requiere sesión de empleador. Las operaciones de lectura añaden
+# `accesoEmpleada`; las públicas usan `security: []`.
+security:
+  - sesionEmpleador: []
+
+paths:
+  # ----------------------- Autenticación -----------------------------------
+  /auth/login:
+    post:
+      operationId: iniciarSesionEmpleador
+      summary: Inicia sesión del empleador (respaldado por Auth.js).
+      security: []
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        "204": { description: Sesión iniciada (cookie establecida). }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /auth/logout:
+    post:
+      operationId: cerrarSesionEmpleador
+      summary: Cierra la sesión del empleador.
+      tags: [auth]
+      responses:
+        "204": { description: Sesión cerrada. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /auth/sesion:
+    get:
+      operationId: obtenerSesion
+      summary: Devuelve la sesión actual del empleador.
+      tags: [auth]
+      responses:
+        "200":
+          description: Sesión vigente.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [autenticado]
+                properties:
+                  autenticado: { type: boolean }
+                  email: { type: string, nullable: true }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  # ----------------------- Acceso de la empleada ---------------------------
+  /acceso/enlace:
+    post:
+      operationId: generarEnlaceAcceso
+      summary: Genera (o regenera) el enlace de acceso de solo lectura de la empleada.
+      tags: [acceso]
+      responses:
+        "200":
+          description: Enlace vigente.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnlaceAcceso" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    delete:
+      operationId: revocarEnlaceAcceso
+      summary: Revoca el enlace de acceso actual de la empleada.
+      tags: [acceso]
+      responses:
+        "204": { description: Enlace revocado. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /acceso/validar:
+    get:
+      operationId: validarAccesoEmpleada
+      summary: Valida el token de la empleada y devuelve su contexto de consulta.
+      security:
+        - accesoEmpleada: []
+      tags: [acceso]
+      responses:
+        "200":
+          description: Token válido.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ContextoEmpleada" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  # ----------------------- Empleada / Configuración ------------------------
+  /empleada:
+    get:
+      operationId: obtenerEmpleada
+      summary: Devuelve la ficha de la empleada (incluye fecha de cumpleaños).
+      security:
+        - sesionEmpleador: []
+        - accesoEmpleada: []
+      tags: [empleada]
+      responses:
+        "200":
+          description: Ficha de la empleada.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Empleada" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      operationId: actualizarEmpleada
+      summary: Crea/actualiza la ficha y las fechas de contrato de la empleada.
+      tags: [empleada]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Empleada" }
+      responses:
+        "200":
+          description: Ficha actualizada.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Empleada" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/BadRequest" }
+
+  /configuracion:
+    get:
+      operationId: obtenerConfiguracion
+      summary: Devuelve salario base y días laborales.
+      security:
+        - sesionEmpleador: []
+        - accesoEmpleada: []
+      tags: [configuracion]
+      responses:
+        "200":
+          description: Configuración vigente.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Configuracion" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    put:
+      operationId: actualizarConfiguracion
+      summary: Actualiza salario base y/o días laborales.
+      tags: [configuracion]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Configuracion" }
+      responses:
+        "200":
+          description: Configuración actualizada.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Configuracion" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/BadRequest" }
+
+  # ----------------------- Items adicionales -------------------------------
+  /items-adicionales:
+    get:
+      operationId: listarItemsAdicionales
+      summary: Lista los items de pago adicional configurados.
+      security:
+        - sesionEmpleador: []
+        - accesoEmpleada: []
+      tags: [items]
+      responses:
+        "200":
+          description: Lista de items.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ItemAdicional" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      operationId: crearItemAdicional
+      summary: Crea un item de pago adicional.
+      tags: [items]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ItemAdicionalInput" }
+      responses:
+        "201":
+          description: Item creado.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ItemAdicional" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/BadRequest" }
+
+  /items-adicionales/{id}:
+    put:
+      operationId: actualizarItemAdicional
+      summary: Actualiza un item de pago adicional.
+      tags: [items]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ItemAdicionalInput" }
+      responses:
+        "200":
+          description: Item actualizado.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ItemAdicional" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/BadRequest" }
+    delete:
+      operationId: eliminarItemAdicional
+      summary: Elimina un item de pago adicional.
+      tags: [items]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "204": { description: Item eliminado. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ----------------------- Liquidaciones -----------------------------------
+  /liquidaciones:
+    get:
+      operationId: listarLiquidaciones
+      summary: Historial de liquidaciones (meses) registradas.
+      security:
+        - sesionEmpleador: []
+        - accesoEmpleada: []
+      tags: [liquidaciones]
+      responses:
+        "200":
+          description: Historial.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/LiquidacionResumen" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /liquidaciones/{anio}/{mes}:
+    parameters:
+      - { name: anio, in: path, required: true, schema: { type: integer } }
+      - { name: mes, in: path, required: true, schema: { type: integer, minimum: 1, maximum: 12 } }
+    get:
+      operationId: obtenerLiquidacion
+      summary: Obtiene (o inicializa el borrador de) la liquidación de un mes, con desglose y calendario.
+      security:
+        - sesionEmpleador: []
+        - accesoEmpleada: []
+      tags: [liquidaciones]
+      responses:
+        "200":
+          description: Liquidación del mes. Para el rol empleada, `notas` se omite (RN-12).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Liquidacion" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "409":
+          description: Mes completamente fuera del periodo de contrato (no liquidable).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+    put:
+      operationId: actualizarLiquidacion
+      summary: Actualiza las novedades del borrador (inasistencias, items, montos puntuales, notas).
+      tags: [liquidaciones]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ActualizarLiquidacionInput" }
+      responses:
+        "200":
+          description: Liquidación recalculada.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Liquidacion" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "409":
+          description: La liquidación está CERRADA o una inasistencia es inválida (festivo/no laboral/fuera de contrato).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422": { $ref: "#/components/responses/BadRequest" }
+    delete:
+      operationId: eliminarLiquidacion
+      summary: Elimina la liquidación de un mes del historial.
+      tags: [liquidaciones]
+      responses:
+        "204": { description: Liquidación eliminada. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /liquidaciones/{anio}/{mes}/cierre:
+    post:
+      operationId: cerrarLiquidacion
+      summary: Aplica/cierra la liquidación; congela salario, valores de items y días laborales.
+      tags: [liquidaciones]
+      parameters:
+        - { name: anio, in: path, required: true, schema: { type: integer } }
+        - { name: mes, in: path, required: true, schema: { type: integer, minimum: 1, maximum: 12 } }
+      responses:
+        "200":
+          description: Liquidación cerrada.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Liquidacion" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "409":
+          description: La liquidación ya está cerrada.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /liquidaciones/{anio}/{mes}/reapertura:
+    post:
+      operationId: reabrirLiquidacion
+      summary: Reabre una liquidación cerrada para corregirla (vuelve a BORRADOR).
+      tags: [liquidaciones]
+      parameters:
+        - { name: anio, in: path, required: true, schema: { type: integer } }
+        - { name: mes, in: path, required: true, schema: { type: integer, minimum: 1, maximum: 12 } }
+      responses:
+        "200":
+          description: Liquidación reabierta.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Liquidacion" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "409":
+          description: La liquidación ya estaba en borrador.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  # ----------------------- Menú --------------------------------------------
+  /menu:
+    get:
+      operationId: obtenerMenu
+      summary: Devuelve la configuración del menú y las entradas de la plantilla.
+      security:
+        - sesionEmpleador: []
+        - accesoEmpleada: []
+      tags: [menu]
+      responses:
+        "200":
+          description: Menú vigente.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Menu" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /menu/configuracion:
+    put:
+      operationId: actualizarConfiguracionMenu
+      summary: Configura las comidas a incluir y la periodicidad del menú.
+      tags: [menu]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MenuConfig" }
+      responses:
+        "200":
+          description: Configuración del menú actualizada.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MenuConfig" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/BadRequest" }
+
+  /menu/entradas:
+    put:
+      operationId: actualizarMenu
+      summary: Define/actualiza las entradas de la plantilla del menú (por semana, día y comida).
+      tags: [menu]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items: { $ref: "#/components/schemas/MenuEntrada" }
+      responses:
+        "200":
+          description: Entradas del menú actualizadas.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/MenuEntrada" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/BadRequest" }
+
+  # ----------------------- Tareas ------------------------------------------
+  /tareas/rutina:
+    get:
+      operationId: obtenerRutinaTareas
+      summary: Devuelve la rutina de tareas por día de la semana.
+      security:
+        - sesionEmpleador: []
+        - accesoEmpleada: []
+      tags: [tareas]
+      responses:
+        "200":
+          description: Rutina de tareas.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/RutinaTarea" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    put:
+      operationId: actualizarRutinaTareas
+      summary: Define/actualiza la rutina de tareas (checklist por día con horarios opcionales).
+      tags: [tareas]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items: { $ref: "#/components/schemas/RutinaTareaInput" }
+      responses:
+        "200":
+          description: Rutina actualizada.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/RutinaTarea" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/BadRequest" }
+
+  /tareas/dia:
+    get:
+      operationId: obtenerTareasDelDia
+      summary: Checklist de tareas de una fecha, con su estado de cumplimiento.
+      security:
+        - sesionEmpleador: []
+        - accesoEmpleada: []
+      tags: [tareas]
+      parameters:
+        - { name: fecha, in: query, required: true, schema: { type: string, format: date } }
+      responses:
+        "200":
+          description: Tareas del día.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/TareaDelDia" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /tareas/cumplimiento:
+    put:
+      operationId: marcarTarea
+      summary: Marca una tarea como hecha/pendiente en una fecha (permitido a la empleada).
+      security:
+        - sesionEmpleador: []
+        - accesoEmpleada: []
+      tags: [tareas]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MarcarTareaInput" }
+      responses:
+        "200":
+          description: Estado de la tarea actualizado.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CumplimientoTarea" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/BadRequest" }
+
+  /tareas/historico:
+    get:
+      operationId: obtenerHistoricoTareas
+      summary: Histórico de cumplimiento de tareas por fecha (rango).
+      tags: [tareas]
+      parameters:
+        - { name: desde, in: query, required: true, schema: { type: string, format: date } }
+        - { name: hasta, in: query, required: true, schema: { type: string, format: date } }
+      responses:
+        "200":
+          description: Cumplimientos en el rango.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/CumplimientoTarea" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
