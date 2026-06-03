@@ -181,7 +181,7 @@ El núcleo del sistema es el **cálculo proporcional del pago** (valor-día sobr
   - **Operaciones del contrato (consume):** `obtenerLiquidacion`, `actualizarLiquidacion`, `cerrarLiquidacion`, `reabrirLiquidacion`.
   - **Specs estimados:** 3
 
-- [ ] **Epic 8.4:** Historial de liquidaciones
+- [/] **Epic 8.4:** Historial de liquidaciones
   - **Dependencias:** Epic 7.1, Epic 5.1, Epic 5.2
   - **Descripción:** Listado de meses liquidados, detalle de cada mes y eliminación con confirmación.
   - **Reglas de negocio clave:** [RN-19 (eliminar con confirmación), RN-09](../01-requirements/business_requirements.md#reglas-de-negocio)
