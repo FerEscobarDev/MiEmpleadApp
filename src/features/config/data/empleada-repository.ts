@@ -64,3 +64,61 @@ export async function obtenerConfiguracionDeEmpleada(
   const config = await db.configuracion.findUnique({ where: { empleadaId } });
   return config ?? undefined;
 }
+
+export async function buscarEmpleadaPorId(
+  empleadaId: string,
+): Promise<Empleada | undefined> {
+  const empleada = await db.empleada.findUnique({ where: { id: empleadaId } });
+  return empleada ?? undefined;
+}
+
+// Datos persistibles de la ficha de la empleada (sin id ni empleadorId).
+export interface FichaEmpleadaInput {
+  nombre: string;
+  fechaNacimiento: Date;
+  fechaInicioContrato: Date;
+  fechaFinContrato: Date | null;
+}
+
+// Actualiza la ficha de una empleada existente (Epic 3.1). La empleada ya existe
+// (la crea el flujo de cuenta del empleador); aquí solo se editan sus campos.
+export async function actualizarFichaEmpleada(
+  empleadaId: string,
+  datos: FichaEmpleadaInput,
+): Promise<Empleada> {
+  return db.empleada.update({
+    where: { id: empleadaId },
+    data: {
+      nombre: datos.nombre,
+      fechaNacimiento: datos.fechaNacimiento,
+      fechaInicioContrato: datos.fechaInicioContrato,
+      fechaFinContrato: datos.fechaFinContrato,
+    },
+  });
+}
+
+// Datos persistibles de la configuración (sin id ni empleadaId).
+export interface ConfiguracionInput {
+  salarioBase: number;
+  diasLaborales: string[];
+}
+
+// Upsert de la configuración por empleada (Epic 3.1). diasLaborales se guarda
+// como JSON (SQLite). Una sola configuración por empleada (@@unique).
+export async function guardarConfiguracion(
+  empleadaId: string,
+  datos: ConfiguracionInput,
+): Promise<Configuracion> {
+  return db.configuracion.upsert({
+    where: { empleadaId },
+    create: {
+      empleadaId,
+      salarioBase: datos.salarioBase,
+      diasLaborales: datos.diasLaborales,
+    },
+    update: {
+      salarioBase: datos.salarioBase,
+      diasLaborales: datos.diasLaborales,
+    },
+  });
+}
