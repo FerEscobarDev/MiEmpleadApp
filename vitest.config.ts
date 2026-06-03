@@ -15,6 +15,14 @@ export default defineConfig({
     env: {
       DATABASE_URL: TEST_DATABASE_URL,
     },
+    // Los tests de integración comparten un único archivo SQLite de prueba y
+    // limpian las tablas entre casos (resetDatabase). Ejecutarlos en un solo
+    // worker (sin paralelismo entre archivos) serializa el acceso a la base y
+    // evita que el reset de un archivo borre datos en uso por otro.
+    fileParallelism: false,
+    poolOptions: {
+      forks: { singleFork: true },
+    },
   },
   resolve: {
     alias: {
