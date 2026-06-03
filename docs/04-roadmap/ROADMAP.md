@@ -188,7 +188,7 @@ El núcleo del sistema es el **cálculo proporcional del pago** (valor-día sobr
   - **Operaciones del contrato (consume):** `listarLiquidaciones`, `obtenerLiquidacion`, `eliminarLiquidacion`, `reabrirLiquidacion`.
   - **Specs estimados:** 2
 
-- [ ] **Epic 8.5:** Menú de cocina
+- [/] **Epic 8.5:** Menú de cocina
   - **Dependencias:** Epic 7.1, Epic 6.1, Epic 8.2
   - **Descripción:** Configuración de comidas/periodicidad y edición de la plantilla del menú, con vista de consulta.
   - **Reglas de negocio clave:** [RN-14, RN-19 (comidas)](../01-requirements/business_requirements.md#reglas-de-negocio)
