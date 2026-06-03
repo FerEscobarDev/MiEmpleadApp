@@ -1,0 +1,169 @@
+// Schema Prisma de MiEmpleadApp — Epic 1.2 (Persistencia).
+// Provider sqlite (ADR-002). SQLite no soporta enums nativos en Prisma:
+// estado / diaSemana / periodicidad se modelan como String y se validan
+// con Zod en la frontera (architecture.md §4 Nota SQLite). Las estructuras
+// (diasLaborales, comidas, diasLaboralesCongelado) se guardan como Json.
+// Montos en COP como Int sin decimales (RN-16). Ids cuid.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Empleador {
+  id           String  @id @default(cuid())
+  email        String  @unique
+  passwordHash String
+  empleada     Empleada?
+}
+
+model Empleada {
+  id                 String   @id @default(cuid())
+  empleadorId        String   @unique
+  nombre             String
+  fechaNacimiento    DateTime
+  fechaInicioContrato DateTime
+  fechaFinContrato   DateTime?
+
+  empleador     Empleador      @relation(fields: [empleadorId], references: [id], onDelete: Cascade)
+  configuracion Configuracion?
+  enlaceAcceso  EnlaceAcceso?
+  menuConfig    MenuConfig?
+  items         ItemAdicional[]
+  liquidaciones Liquidacion[]
+  rutinas       RutinaTarea[]
+}
+
+model Configuracion {
+  id            String @id @default(cuid())
+  empleadaId    String @unique
+  salarioBase   Int
+  diasLaborales Json
+
+  empleada Empleada @relation(fields: [empleadaId], references: [id], onDelete: Cascade)
+}
+
+model EnlaceAcceso {
+  id         String  @id @default(cuid())
+  token      String  @unique
+  empleadaId String  @unique
+  activo     Boolean @default(true)
+
+  empleada Empleada @relation(fields: [empleadaId], references: [id], onDelete: Cascade)
+}
+
+model ItemAdicional {
+  id           String  @id @default(cuid())
+  empleadaId   String
+  nombre       String
+  valorUnitario Int
+  color        String
+  activo       Boolean @default(true)
+
+  empleada         Empleada          @relation(fields: [empleadaId], references: [id], onDelete: Cascade)
+  liquidacionItems LiquidacionItem[]
+}
+
+model Liquidacion {
+  id                     String  @id @default(cuid())
+  empleadaId             String
+  anio                   Int
+  mes                    Int
+  // estado: "BORRADOR" | "CERRADA" (enum-como-String, validado con Zod en la frontera).
+  estado                 String  @default("BORRADOR")
+  notas                  String?
+  // Campos congelados al cerrar (RN-09); opcionales hasta el cierre.
+  salarioBaseCongelado   Int?
+  diasLaboralesCongelado Json?
+  totalCongelado         Int?
+
+  empleada      Empleada          @relation(fields: [empleadaId], references: [id], onDelete: Cascade)
+  inasistencias Inasistencia[]
+  items         LiquidacionItem[]
+  montosPuntuales MontoPuntual[]
+
+  // RN-10: una sola liquidación por (empleada, año, mes).
+  @@unique([empleadaId, anio, mes])
+}
+
+model Inasistencia {
+  id            String   @id @default(cuid())
+  liquidacionId String
+  fecha         DateTime
+
+  liquidacion Liquidacion @relation(fields: [liquidacionId], references: [id], onDelete: Cascade)
+}
+
+model LiquidacionItem {
+  id            String  @id @default(cuid())
+  liquidacionId String
+  // itemId opcional: el snapshot histórico (nombre/valorUnitario) sobrevive
+  // aunque el ItemAdicional se elimine (RN-09).
+  itemId        String?
+  nombre        String
+  valorUnitario Int
+  cantidad      Int
+
+  liquidacion Liquidacion    @relation(fields: [liquidacionId], references: [id], onDelete: Cascade)
+  item        ItemAdicional? @relation(fields: [itemId], references: [id], onDelete: SetNull)
+}
+
+model MontoPuntual {
+  id            String @id @default(cuid())
+  liquidacionId String
+  descripcion   String
+  monto         Int
+
+  liquidacion Liquidacion @relation(fields: [liquidacionId], references: [id], onDelete: Cascade)
+}
+
+model MenuConfig {
+  id         String @id @default(cuid())
+  empleadaId String @unique
+  comidas    Json
+  // periodicidad: "SEMANAL" | "QUINCENAL" | "MENSUAL" (enum-como-String).
+  periodicidad String @default("SEMANAL")
+
+  empleada Empleada     @relation(fields: [empleadaId], references: [id], onDelete: Cascade)
+  entradas MenuEntrada[]
+}
+
+model MenuEntrada {
+  id           String @id @default(cuid())
+  menuConfigId String
+  semana       Int
+  // diaSemana como String (enum-como-String).
+  diaSemana    String
+  comida       String
+  descripcion  String
+
+  menuConfig MenuConfig @relation(fields: [menuConfigId], references: [id], onDelete: Cascade)
+}
+
+model RutinaTarea {
+  id          String  @id @default(cuid())
+  empleadaId  String
+  // diaSemana como String (enum-como-String).
+  diaSemana   String
+  descripcion String
+  // horaInicio/horaFin opcionales (formato "HH:mm" como String).
+  horaInicio  String?
+  horaFin     String?
+  orden       Int
+
+  empleada     Empleada           @relation(fields: [empleadaId], references: [id], onDelete: Cascade)
+  cumplimientos CumplimientoTarea[]
+}
+
+model CumplimientoTarea {
+  id            String   @id @default(cuid())
+  rutinaTareaId String
+  fecha         DateTime
+  hecha         Boolean  @default(false)
+
+  rutinaTarea RutinaTarea @relation(fields: [rutinaTareaId], references: [id], onDelete: Cascade)
+}

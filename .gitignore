@@ -138,3 +138,12 @@ dist
 
 # Specture runtime state (never commit)
 .specture/state/
+
+/generated/prisma
+
+# SQLite database files (datos locales / volumen persistente — nunca commitear)
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+prisma/dev.db*
