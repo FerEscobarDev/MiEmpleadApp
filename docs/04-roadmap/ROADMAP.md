@@ -160,7 +160,7 @@ El núcleo del sistema es el **cálculo proporcional del pago** (valor-día sobr
 ### Milestone 8: Frontend Features
 *Objetivo:* las páginas, en orden, cada una después del backend que implementa las operaciones que consume. Precedidas por el gate de aprobación del Design System (Epic 7.1).
 
-- [ ] **Epic 8.1:** Login y layout del empleador
+- [/] **Epic 8.1:** Login y layout del empleador
   - **Dependencias:** Epic 7.1, Epic 4.1
   - **Descripción:** Pantalla de login y shell autenticado del empleador (navegación: Configuración | Liquidar | Historial | Menú | Tareas).
   - **Reglas de negocio clave:** [RN-13](../01-requirements/business_requirements.md#reglas-de-negocio)
