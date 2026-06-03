@@ -119,7 +119,7 @@ El núcleo del sistema es el **cálculo proporcional del pago** (valor-día sobr
   - **Operaciones del contrato (implementa):** `listarLiquidaciones`, `obtenerLiquidacion`, `actualizarLiquidacion`.
   - **Specs estimados:** 3
 
-- [ ] **Epic 5.2:** API Liquidación — ciclo de vida
+- [/] **Epic 5.2:** API Liquidación — ciclo de vida
   - **Dependencias:** Epic 5.1
   - **Descripción:** Cerrar (congelar salario, valores de items y días laborales), reabrir y eliminar liquidaciones.
   - **Reglas de negocio clave:** [RN-09 (congelamiento), RN-11 (borrador→cerrada→reabrible), RN-19 (eliminar con confirmación — UI)](../01-requirements/business_requirements.md#reglas-de-negocio)
