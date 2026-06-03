@@ -15,6 +15,7 @@ import {
   CardTitle,
 } from "@/components/ui/Card";
 import { DesglosePanel } from "./desglose-panel";
+import { NovedadesPanel } from "./novedades-panel";
 
 // Sección cliente de /liquidar (Spec seleccion-y-desglose). Selecciona mes/año,
 // carga la liquidación por el cliente tipado (obtenerLiquidacion) y renderiza el
@@ -24,10 +25,17 @@ import { DesglosePanel } from "./desglose-panel";
 // y el ciclo de cerrar/reabrir se añaden en specs posteriores del mismo epic.
 
 type Liquidacion = components["schemas"]["Liquidacion"];
+type ItemAdicional = components["schemas"]["ItemAdicional"];
+type ActualizarLiquidacionInput = components["schemas"]["ActualizarLiquidacionInput"];
 
 const ERROR_CARGA = "No pudimos cargar la liquidación. Intenta de nuevo.";
+const ERROR_GUARDADO = "No pudimos guardar las novedades. Intenta de nuevo.";
 const MENSAJE_FUERA_CONTRATO =
   "Este mes está fuera del periodo de contrato, por lo que no es liquidable.";
+const MENSAJE_INASISTENCIA_INVALIDA =
+  "Esa fecha no admite inasistencia: solo días laborales, no festivos y dentro del contrato.";
+const MENSAJE_LIQUIDACION_CERRADA =
+  "El mes ya está cerrado. Reábrelo para poder editar las novedades.";
 
 const MESES: ReadonlyArray<{ valor: number; etiqueta: string }> = [
   { valor: 1, etiqueta: "Enero" },
@@ -66,10 +74,13 @@ export function LiquidarMesSection({ anioInicial, mesInicial }: LiquidarMesSecti
   const [mes, setMes] = React.useState(mesInicial);
   const [estadoCarga, setEstadoCarga] = React.useState<EstadoCarga>("cargando");
   const [liquidacion, setLiquidacion] = React.useState<Liquidacion | null>(null);
+  const [itemsCatalogo, setItemsCatalogo] = React.useState<ItemAdicional[]>([]);
+  const [mensajeNovedad, setMensajeNovedad] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     let activo = true;
     setEstadoCarga("cargando");
+    setMensajeNovedad(null);
     (async () => {
       const { data, error } = await apiClient.GET("/liquidaciones/{anio}/{mes}", {
         params: { path: { anio, mes } },
@@ -95,6 +106,79 @@ export function LiquidarMesSection({ anioInicial, mesInicial }: LiquidarMesSecti
       activo = false;
     };
   }, [anio, mes]);
+
+  // Catálogo de items activos para capturar cantidades en el panel de novedades.
+  React.useEffect(() => {
+    let activo = true;
+    (async () => {
+      const { data, error } = await apiClient.GET("/items-adicionales");
+      if (!activo || error || !data) {
+        return;
+      }
+      setItemsCatalogo((data as ItemAdicional[]).filter((i) => i.activo));
+    })();
+    return () => {
+      activo = false;
+    };
+  }, []);
+
+  const editable = liquidacion?.estado === "BORRADOR";
+
+  // Envía una actualización de novedades y refresca con la respuesta recalculada.
+  // Mapea los 409 de negocio a mensajes amables; conserva el estado previo si falla.
+  const actualizar = React.useCallback(
+    async (parcial: ActualizarLiquidacionInput): Promise<void> => {
+      const actual = liquidacion;
+      if (!actual) {
+        return;
+      }
+      const body: ActualizarLiquidacionInput = {
+        inasistencias: actual.inasistencias,
+        items: actual.items.map((it) => ({ itemId: it.itemId, cantidad: it.cantidad })),
+        montosPuntuales: actual.montosPuntuales.map((m) => ({
+          descripcion: m.descripcion,
+          monto: m.monto,
+        })),
+        notas: actual.notas ?? "",
+        ...parcial,
+      };
+      const { data, error } = await apiClient.PUT("/liquidaciones/{anio}/{mes}", {
+        params: { path: { anio: actual.anio, mes: actual.mes } },
+        body,
+      });
+      if (error || !data) {
+        const code = codigoDeError(error);
+        if (code === "INASISTENCIA_INVALIDA") {
+          setMensajeNovedad(MENSAJE_INASISTENCIA_INVALIDA);
+          toast.error(MENSAJE_INASISTENCIA_INVALIDA);
+        } else if (code === "LIQUIDACION_CERRADA") {
+          setMensajeNovedad(MENSAJE_LIQUIDACION_CERRADA);
+          toast.error(MENSAJE_LIQUIDACION_CERRADA);
+        } else {
+          toast.error(ERROR_GUARDADO);
+        }
+        return;
+      }
+      setMensajeNovedad(null);
+      setLiquidacion(data as Liquidacion);
+    },
+    [liquidacion],
+  );
+
+  // Marca/desmarca una inasistencia para la fecha tocada en el calendario (RN-04).
+  const alternarInasistencia = React.useCallback(
+    (fecha: string): void => {
+      if (!editable || !liquidacion) {
+        return;
+      }
+      const yaEs = liquidacion.inasistencias.includes(fecha);
+      const inasistencias = yaEs
+        ? liquidacion.inasistencias.filter((f) => f !== fecha)
+        : [...liquidacion.inasistencias, fecha];
+      void actualizar({ inasistencias });
+    },
+    [editable, liquidacion, actualizar],
+  );
 
   const aniosDisponibles = React.useMemo(() => {
     const base = anioInicial;
@@ -185,16 +269,43 @@ export function LiquidarMesSection({ anioInicial, mesInicial }: LiquidarMesSecti
             <CardHeader>
               <CardTitle>Calendario del mes</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex flex-col gap-md">
               <MonthCalendar
                 anio={liquidacion.anio}
                 mes={liquidacion.mes}
                 dias={liquidacion.calendario as DiaCalendario[]}
+                onSelectDay={editable ? alternarInasistencia : undefined}
               />
+              {mensajeNovedad ? (
+                <p role="alert" className="text-body text-error">
+                  {mensajeNovedad}
+                </p>
+              ) : null}
             </CardContent>
           </Card>
 
           <DesglosePanel desglose={liquidacion.desglose} />
+
+          <NovedadesPanel
+            itemsCatalogo={itemsCatalogo}
+            itemsLiquidacion={liquidacion.items}
+            montosPuntuales={liquidacion.montosPuntuales}
+            notas={liquidacion.notas ?? ""}
+            editable={Boolean(editable)}
+            onGuardarItems={(items) => actualizar({ items })}
+            onAgregarMonto={(descripcion, monto) =>
+              actualizar({
+                montosPuntuales: [
+                  ...liquidacion.montosPuntuales.map((m) => ({
+                    descripcion: m.descripcion,
+                    monto: m.monto,
+                  })),
+                  { descripcion, monto },
+                ],
+              })
+            }
+            onGuardarNotas={(notas) => actualizar({ notas })}
+          />
         </div>
       ) : null}
     </div>
