@@ -20,19 +20,26 @@ export const API_BASE_URL = `${ORIGIN}/api/v1`;
 // Resolvemos `fetch` en cada llamada (no al crear el cliente) para respetar el
 // `fetch` vigente del entorno (navegador, Next runtime, o un mock en tests).
 // openapi-fetch construye un `Request`; lo invocamos con la URL como primer
-// argumento (legible/inspeccionable) y el `Request` como init, preservando
-// método, headers y body sin reconstruirlos a mano.
-const dynamicFetch: typeof fetch = (input, init) => {
+// argumento (legible/inspeccionable) y reconstruimos el init preservando
+// método, headers y body.
+//
+// IMPORTANTE: el body se lee a un ArrayBuffer (bufferizado) en lugar de pasar
+// `req.body` como stream con `duplex: "half"`. Un body en streaming obliga a
+// Chrome a usar HTTP/2 (request streaming) y la negociación ALPN→h2 falla
+// contra servidores HTTP/1.1 (ERR_ALPN_NEGOTIATION_FAILED). Bufferizar el body
+// mantiene compatibilidad con HTTP/1.1 en navegadores reales.
+const dynamicFetch: typeof fetch = async (input, init) => {
   if (typeof Request !== "undefined" && input instanceof Request) {
     const req = input;
+    const tieneBody = req.method !== "GET" && req.method !== "HEAD";
+    const body = tieneBody ? await req.arrayBuffer() : undefined;
     const reqInit: RequestInit = {
       method: req.method,
       headers: req.headers,
-      body: req.body,
+      body,
       credentials: req.credentials,
       signal: req.signal,
-      ...(req.body ? { duplex: "half" } : {}),
-    } as RequestInit;
+    };
     return globalThis.fetch(req.url, reqInit);
   }
   return globalThis.fetch(input, init);
