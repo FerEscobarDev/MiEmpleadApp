@@ -1,4 +1,4 @@
-import { db } from "@/lib/db";
+import { buscarPrimeraEmpleadaId } from "@/features/config/data/empleada-repository";
 
 // COSTURA DE AUTENTICACIÓN — Epic 3.1.
 //
@@ -21,9 +21,9 @@ export class EmpleadaNoResueltaError extends Error {
 }
 
 export async function getCurrentEmpleadaId(): Promise<string> {
-  const empleada = await db.empleada.findFirst({ select: { id: true } });
-  if (!empleada) {
+  const empleadaId = await buscarPrimeraEmpleadaId();
+  if (!empleadaId) {
     throw new EmpleadaNoResueltaError();
   }
-  return empleada.id;
+  return empleadaId;
 }

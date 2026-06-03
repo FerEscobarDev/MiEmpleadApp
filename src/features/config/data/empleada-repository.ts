@@ -72,6 +72,15 @@ export async function buscarEmpleadaPorId(
   return empleada ?? undefined;
 }
 
+// Resuelve la (única) empleada de la cuenta. La usa la costura de auth de Epic 3.1
+// mientras no existe la sesión real (Epic 4.2); centraliza el acceso a la base en
+// la capa de persistencia (architecture.md §6) en vez de tocar Prisma desde la
+// costura.
+export async function buscarPrimeraEmpleadaId(): Promise<string | undefined> {
+  const empleada = await db.empleada.findFirst({ select: { id: true } });
+  return empleada?.id ?? undefined;
+}
+
 // Datos persistibles de la ficha de la empleada (sin id ni empleadorId).
 export interface FichaEmpleadaInput {
   nombre: string;
