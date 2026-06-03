@@ -1,3 +1,4 @@
+import { rechazarSiNoEmpleador } from "@/features/auth/authorize";
 import {
   errorResponse,
   validationErrorResponse,
@@ -29,6 +30,12 @@ export async function PUT(
   request: Request,
   context: RouteContext,
 ): Promise<Response> {
+  // RN-13: la empleada (token) no puede editar items.
+  const rechazo = await rechazarSiNoEmpleador(request);
+  if (rechazo) {
+    return rechazo;
+  }
+
   let payload: unknown;
   try {
     payload = await request.json();
@@ -55,10 +62,15 @@ export async function PUT(
 }
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   context: RouteContext,
 ): Promise<Response> {
-  void _request;
+  // RN-13: la empleada (token) no puede eliminar items.
+  const rechazo = await rechazarSiNoEmpleador(request);
+  if (rechazo) {
+    return rechazo;
+  }
+
   const { id } = await context.params;
   try {
     await eliminarItemAdicional(id);

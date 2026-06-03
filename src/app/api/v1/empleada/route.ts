@@ -1,4 +1,5 @@
 import { getCurrentEmpleadaId } from "@/features/auth/current-empleada";
+import { rechazarSiNoEmpleador } from "@/features/auth/authorize";
 import {
   errorResponse,
   validationErrorResponse,
@@ -46,6 +47,12 @@ export async function GET(_request: Request): Promise<Response> {
 }
 
 export async function PUT(request: Request): Promise<Response> {
+  // RN-13: la empleada (token) no puede escribir la ficha.
+  const rechazo = await rechazarSiNoEmpleador(request);
+  if (rechazo) {
+    return rechazo;
+  }
+
   let payload: unknown;
   try {
     payload = await request.json();
