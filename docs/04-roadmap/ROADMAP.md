@@ -100,7 +100,7 @@ El núcleo del sistema es el **cálculo proporcional del pago** (valor-día sobr
   - **Operaciones del contrato (implementa):** `iniciarSesionEmpleador`, `cerrarSesionEmpleador`, `obtenerSesion`.
   - **Specs estimados:** 2
 
-- [/] **Epic 4.2:** Acceso de la empleada por enlace
+- [x] **Epic 4.2:** Acceso de la empleada por enlace
   - **Dependencias:** Epic 4.1, Epic 3.1
   - **Descripción:** Generar/revocar enlace de acceso (token) y validarlo; middleware de autorización por rol (empleada = solo lectura + `marcarTarea`; notas privadas ocultas).
   - **Reglas de negocio clave:** [RN-12 (notas privadas), RN-13 (rol empleada)](../01-requirements/business_requirements.md#reglas-de-negocio)
