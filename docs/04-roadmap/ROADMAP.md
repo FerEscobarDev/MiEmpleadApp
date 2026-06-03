@@ -167,7 +167,7 @@ El núcleo del sistema es el **cálculo proporcional del pago** (valor-día sobr
   - **Operaciones del contrato (consume):** `iniciarSesionEmpleador`, `obtenerSesion`, `cerrarSesionEmpleador`.
   - **Specs estimados:** 2
 
-- [ ] **Epic 8.2:** Configuración
+- [/] **Epic 8.2:** Configuración
   - **Dependencias:** Epic 7.1, Epic 3.1, Epic 3.2, Epic 4.2, Epic 8.1
   - **Descripción:** Ficha de la empleada, salario, días laborales, CRUD de items adicionales y generación/revocación del enlace de acceso.
   - **Reglas de negocio clave:** [RN-02, RN-07, RN-18, RN-20](../01-requirements/business_requirements.md#reglas-de-negocio)
