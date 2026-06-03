@@ -212,7 +212,7 @@ El núcleo del sistema es el **cálculo proporcional del pago** (valor-día sobr
 ### Milestone 9: Operación
 *Objetivo:* pulido de consulta offline (PWA) y despliegue.
 
-- [ ] **Epic 9.1:** Consulta offline (PWA) y despliegue
+- [/] **Epic 9.1:** Consulta offline (PWA) y despliegue
   - **Dependencias:** Epic 8.7
   - **Descripción:** Caché offline de menú y tareas para la empleada (Restricción No Funcional) y configuración de despliegue en VPS con Docker/Dokploy: instancia única, volumen persistente para el archivo SQLite (modo WAL) y backup periódico por copia del `.db`.
   - **Reglas de negocio clave:** [Consulta sin conexión (deseable)](../01-requirements/business_requirements.md#restricciones-no-funcionales-de-negocio)
