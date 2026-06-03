@@ -111,7 +111,7 @@ El núcleo del sistema es el **cálculo proporcional del pago** (valor-día sobr
 ### Milestone 5: Liquidación (API)
 *Objetivo:* backend completo de la liquidación mensual: lectura/desglose/calendario, novedades del borrador y ciclo de vida (cierre/reapertura/eliminación) con congelamiento.
 
-- [/] **Epic 5.1:** API Liquidación — lectura y novedades
+- [x] **Epic 5.1:** API Liquidación — lectura y novedades
   - **Dependencias:** Epic 2.2, Epic 3.1, Epic 3.2
   - **Descripción:** Historial, obtención/inicialización del borrador con desglose y calendario, y edición de novedades (inasistencias, items, montos puntuales, notas) con recálculo en vivo y validación de inasistencias.
   - **Reglas de negocio clave:** [RN-01–RN-08, RN-10, RN-12](../01-requirements/business_requirements.md#reglas-de-negocio)
