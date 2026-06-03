@@ -62,7 +62,7 @@ El núcleo del sistema es el **cálculo proporcional del pago** (valor-día sobr
   - **Operaciones del contrato:** ninguna.
   - **Specs estimados:** 1
 
-- [/] **Epic 2.2:** Dominio de cálculo de liquidación
+- [x] **Epic 2.2:** Dominio de cálculo de liquidación
   - **Dependencias:** Epic 2.1
   - **Descripción:** Funciones puras: conteo de días laborales del mes completo, periodo de contrato (inicio/fin parcial), valor-día, descuento de inasistencias, subtotales de items y montos puntuales, total, y construcción del modelo de días del calendario (tipo por día). Recibe fechas/config/festivos como parámetros.
   - **Reglas de negocio clave:** [RN-01, RN-02, RN-03, RN-04, RN-06, RN-07, RN-08](../01-requirements/business_requirements.md#reglas-de-negocio)
