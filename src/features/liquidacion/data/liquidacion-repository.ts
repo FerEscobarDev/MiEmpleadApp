@@ -1,4 +1,5 @@
 import type { Liquidacion } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { toIsoDate } from "@/features/config/application/date-iso";
 
@@ -164,7 +165,8 @@ export async function reabrirLiquidacionRow(liquidacionId: string): Promise<Liqu
     data: {
       estado: "BORRADOR",
       salarioBaseCongelado: null,
-      diasLaboralesCongelado: null,
+      // Prisma exige Prisma.JsonNull (no `null`) para limpiar un campo Json nullable.
+      diasLaboralesCongelado: Prisma.JsonNull,
       totalCongelado: null,
     },
   });
