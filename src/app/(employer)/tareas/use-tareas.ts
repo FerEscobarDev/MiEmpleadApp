@@ -1,7 +1,3 @@
-"use client";
-
-import * as React from "react";
-import { apiClient } from "@/lib/api/client";
 import type { components } from "@/lib/api/schema";
 
 // Hooks de datos de /tareas (navigation_map.md §`/tareas`, HU-23/24/25/26).
