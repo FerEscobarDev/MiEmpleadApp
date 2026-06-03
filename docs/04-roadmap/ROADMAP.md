@@ -81,7 +81,7 @@ El núcleo del sistema es el **cálculo proporcional del pago** (valor-día sobr
   - **Operaciones del contrato (implementa):** `obtenerEmpleada`, `actualizarEmpleada`, `obtenerConfiguracion`, `actualizarConfiguracion`.
   - **Specs estimados:** 2
 
-- [ ] **Epic 3.2:** API Items de pago adicional
+- [/] **Epic 3.2:** API Items de pago adicional
   - **Dependencias:** Epic 1.2
   - **Descripción:** CRUD de items adicionales (nombre, valor unitario, color, activo).
   - **Reglas de negocio clave:** [RN-08, RN-09 (congelamiento al usarse)](../01-requirements/business_requirements.md#reglas-de-negocio)
