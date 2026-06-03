@@ -1,3 +1,82 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+ * Variables de tema del Design System (design_system.md §2, §6).
+ * Valores en formato HSL "H S% L%" para que Tailwind aplique <alpha-value>.
+ * :root = modo claro; .dark = modo oscuro (preferencia inicial = sistema,
+ * resuelta por next-themes vía la clase en <html>).
+ */
+@layer base {
+  :root {
+    /* Marca */
+    --primary: 174 84% 32%; /* teal #0D9488 */
+    --primary-hover: 175 77% 26%; /* #0F766E */
+    --primary-soft: 166 76% 97%; /* #F0FDFA */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 215 19% 35%; /* slate #475569 */
+    --secondary-foreground: 0 0% 100%;
+    --accent: 38 92% 50%; /* amber #F59E0B */
+    --accent-foreground: 215 28% 17%;
+
+    /* Semánticos */
+    --success: 142 72% 29%; /* #15803D */
+    --warning: 26 90% 37%; /* #B45309 */
+    --error: 0 72% 51%; /* #DC2626 */
+    --info: 224 76% 48%; /* #1D4ED8 */
+
+    /* Superficies y texto (modo claro) */
+    --background: 210 40% 98%; /* neutral.50 #F8FAFC */
+    --surface: 0 0% 100%; /* neutral.0 */
+    --surface-muted: 210 40% 96%; /* neutral.100 #F1F5F9 */
+    --border: 214 32% 91%; /* neutral.200 #E2E8F0 */
+    --foreground: 222 47% 11%; /* neutral.900 #0F172A */
+    --foreground-muted: 215 19% 35%; /* neutral.600 #475569 */
+    --ring: 174 84% 32%; /* foco = primary */
+  }
+
+  .dark {
+    /* La marca mantiene contraste AA sobre fondo oscuro. */
+    --primary: 173 58% 45%;
+    --primary-hover: 174 62% 52%;
+    --primary-soft: 175 40% 18%;
+    --primary-foreground: 222 47% 11%;
+    --secondary: 215 20% 65%;
+    --secondary-foreground: 222 47% 11%;
+    --accent: 38 92% 55%;
+    --accent-foreground: 222 47% 11%;
+
+    --success: 142 60% 50%;
+    --warning: 33 90% 55%;
+    --error: 0 72% 60%;
+    --info: 217 91% 65%;
+
+    /* Superficies oscuras: fondo neutral.900, superficie neutral.800. */
+    --background: 222 47% 11%; /* neutral.900 */
+    --surface: 217 33% 17%; /* neutral.800 #1E293B */
+    --surface-muted: 215 25% 27%;
+    --border: 215 25% 27%;
+    --foreground: 210 40% 98%;
+    --foreground-muted: 215 20% 65%;
+    --ring: 173 58% 45%;
+  }
+
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: var(--font-sans), Inter, system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+  }
+
+  /* Montos en COP alineados con números tabulares (design_system.md §2.4). */
+  .text-money {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+  }
+}

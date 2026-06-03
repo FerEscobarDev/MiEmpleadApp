@@ -12,6 +12,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
+    "gen:api": "openapi-typescript docs/02-architecture/api-contract.openapi.yaml -o src/lib/api/schema.d.ts",
     "seed:empleador": "tsx scripts/seed-empleador.ts"
   },
   "dependencies": {
