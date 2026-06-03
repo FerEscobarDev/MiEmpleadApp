@@ -10,6 +10,7 @@ import {
 import {
   obtenerLiquidacionDelMes,
   actualizarLiquidacionDelMes,
+  eliminarLiquidacionDelMes,
 } from "@/features/liquidacion/application/liquidacion-service";
 import { actualizarLiquidacionInputSchema } from "@/features/liquidacion/application/schemas";
 
@@ -24,6 +25,7 @@ const NO_AUTORIZADO = "NO_AUTORIZADO";
 const MES_FUERA_DE_CONTRATO = "MES_FUERA_DE_CONTRATO";
 const LIQUIDACION_CERRADA = "LIQUIDACION_CERRADA";
 const INASISTENCIA_INVALIDA = "INASISTENCIA_INVALIDA";
+const LIQUIDACION_NO_ENCONTRADA = "LIQUIDACION_NO_ENCONTRADA";
 
 interface RouteContext {
   params: Promise<{ anio: string; mes: string }>;
@@ -152,6 +154,48 @@ export async function PUT(
     return Response.json(result.liquidacion, { status: 200 });
   } catch (error) {
     console.error("Error en PUT /api/v1/liquidaciones/[anio]/[mes]", error);
+    return errorResponse(500, "ERROR_INTERNO", "Error interno.");
+  }
+}
+
+export async function DELETE(
+  request: Request,
+  context: RouteContext,
+): Promise<Response> {
+  // RN-13: la empleada (token) no puede eliminar la liquidación.
+  const rechazo = await rechazarSiNoEmpleador(request);
+  if (rechazo) {
+    return rechazo;
+  }
+
+  const contexto = await resolverRol(request);
+  if (!contexto) {
+    return errorResponse(401, NO_AUTORIZADO, "Identidad no válida.");
+  }
+
+  const { anio: anioRaw, mes: mesRaw } = await context.params;
+  const parsed = parsearMes(anioRaw, mesRaw);
+  if (!parsed) {
+    return validationErrorResponse({ anio: anioRaw, mes: mesRaw });
+  }
+
+  try {
+    const result = await eliminarLiquidacionDelMes(
+      contexto.empleadaId,
+      parsed.anio,
+      parsed.mes,
+    );
+    if (!result.ok) {
+      return errorResponse(
+        404,
+        LIQUIDACION_NO_ENCONTRADA,
+        "No existe una liquidación para ese mes.",
+      );
+    }
+    // RN-19: eliminación exitosa, sin cuerpo (204). La confirmación es de la UI.
+    return new Response(null, { status: 204 });
+  } catch (error) {
+    console.error("Error en DELETE /api/v1/liquidaciones/[anio]/[mes]", error);
     return errorResponse(500, "ERROR_INTERNO", "Error interno.");
   }
 }

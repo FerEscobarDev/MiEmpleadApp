@@ -5,6 +5,9 @@ import {
   listarLiquidacionesDeEmpleada,
   cargarNovedades,
   reemplazarNovedades,
+  cerrarConCongelamiento,
+  reabrirLiquidacionRow,
+  eliminarLiquidacionRow,
   type NovedadesLiquidacion,
   type ReemplazoItem,
 } from "@/features/liquidacion/data/liquidacion-repository";
@@ -35,7 +38,8 @@ import type { ActualizarLiquidacionInputDto } from "./schemas";
 // repositorios (§2.5). NO contiene cálculo monetario propio (vive en el dominio)
 // ni accede a Prisma directamente (lo hacen los repositorios). Mientras la
 // liquidación es BORRADOR, el desglose se calcula en vivo con la configuración
-// vigente (RN-09; el congelamiento es Epic 5.2).
+// vigente; una vez CERRADA, se calcula con los valores CONGELADOS de la fila
+// (salario base, días laborales y el snapshot de items) — RN-09, Epic 5.2.
 
 // DTO LiquidacionResumen del contrato (salida de listarLiquidaciones).
 export interface LiquidacionResumenDto {
@@ -85,6 +89,20 @@ export type ActualizarLiquidacionResult =
   | { ok: false; error: "LIQUIDACION_CERRADA" }
   | { ok: false; error: "INASISTENCIA_INVALIDA"; invalidas: string[] };
 
+export type CerrarLiquidacionResult =
+  | { ok: true; liquidacion: LiquidacionDto }
+  | { ok: false; error: "MES_FUERA_DE_CONTRATO" }
+  | { ok: false; error: "LIQUIDACION_CERRADA" };
+
+export type ReabrirLiquidacionResult =
+  | { ok: true; liquidacion: LiquidacionDto }
+  | { ok: false; error: "MES_FUERA_DE_CONTRATO" }
+  | { ok: false; error: "LIQUIDACION_BORRADOR" };
+
+export type EliminarLiquidacionResult =
+  | { ok: true }
+  | { ok: false; error: "LIQUIDACION_NO_ENCONTRADA" };
+
 // Configuración resuelta de la empleada para alimentar el dominio.
 interface ContextoCalculo {
   salarioBase: number;
@@ -108,6 +126,25 @@ async function resolverContexto(empleadaId: string): Promise<ContextoCalculo> {
     fechaFinContrato: empleada.fechaFinContrato
       ? toIsoDate(empleada.fechaFinContrato)
       : null,
+  };
+}
+
+// Contexto de cálculo de una fila ya leída: si está CERRADA usa los valores
+// congelados (RN-09); si es BORRADOR usa la configuración vigente. Las fechas de
+// contrato no se congelan (no son configuración mutable de salario/días).
+function contextoDeLiquidacion(
+  row: LiquidacionRow,
+  ctxVigente: ContextoCalculo,
+): ContextoCalculo {
+  if (row.estado !== "CERRADA") {
+    return ctxVigente;
+  }
+  return {
+    salarioBase: row.salarioBaseCongelado ?? ctxVigente.salarioBase,
+    diasLaborales:
+      (row.diasLaboralesCongelado as DiaSemana[] | null) ?? ctxVigente.diasLaborales,
+    fechaInicioContrato: ctxVigente.fechaInicioContrato,
+    fechaFinContrato: ctxVigente.fechaFinContrato,
   };
 }
 
@@ -202,6 +239,11 @@ export async function listarResumenLiquidaciones(
   const ctx = await resolverContexto(empleadaId);
   const resumenes = await Promise.all(
     liquidaciones.map(async (row) => {
+      // RN-09: el total de un mes CERRADO es su total congelado; un BORRADOR se
+      // calcula en vivo con la configuración vigente.
+      if (row.estado === "CERRADA" && row.totalCongelado !== null) {
+        return { anio: row.anio, mes: row.mes, estado: row.estado, total: row.totalCongelado };
+      }
       const festivos = getHolidaysInMonth(row.anio, row.mes);
       const novedades = await cargarNovedades(row.id);
       const desglose = desgloseDe(row.anio, row.mes, ctx, festivos, novedades);
@@ -233,7 +275,9 @@ export async function obtenerLiquidacionDelMes(
   }
   const festivos = getHolidaysInMonth(anio, mes);
   const novedades = await cargarNovedades(row.id);
-  return { ok: true, liquidacion: armarDto(row, ctx, festivos, novedades) };
+  // RN-09: una liquidación CERRADA se lee con sus valores congelados.
+  const ctxLectura = contextoDeLiquidacion(row, ctx);
+  return { ok: true, liquidacion: armarDto(row, ctxLectura, festivos, novedades) };
 }
 
 // actualizarLiquidacion: reemplaza las novedades del borrador y recalcula en vivo.
@@ -300,4 +344,118 @@ export async function actualizarLiquidacionDelMes(
   const actualizada = (await buscarLiquidacionPorMes(empleadaId, anio, mes)) ?? row;
   const novedades = await cargarNovedades(actualizada.id);
   return { ok: true, liquidacion: armarDto(actualizada, ctx, festivos, novedades) };
+}
+
+// Re-sincroniza el snapshot de los items de la liquidación con el catálogo vigente
+// en el momento del cierre (RN-09): cada item conserva su cantidad, pero su
+// nombre/valorUnitario se fijan al valor vigente, que quedará congelado.
+async function snapshotItemsAlCierre(
+  empleadaId: string,
+  novedades: NovedadesLiquidacion,
+): Promise<ReemplazoItem[]> {
+  if (novedades.items.length === 0) {
+    return [];
+  }
+  const catalogo = await listarItems(empleadaId);
+  const porId = new Map(catalogo.map((it) => [it.id, it]));
+  return novedades.items.map((it) => {
+    const vigente = it.itemId ? porId.get(it.itemId) : undefined;
+    return {
+      itemId: vigente ? vigente.id : it.itemId,
+      nombre: vigente ? vigente.nombre : it.nombre,
+      valorUnitario: vigente ? vigente.valorUnitario : it.valorUnitario,
+      cantidad: it.cantidad,
+    };
+  });
+}
+
+// cerrarLiquidacion: aplica el mes y congela salario base, días laborales, valores
+// de items y el total calculado (RN-09). 409 si ya está cerrada; 409 si el mes está
+// fuera de contrato. Inicializa la fila si aún no existe (EC-2).
+export async function cerrarLiquidacionDelMes(
+  empleadaId: string,
+  anio: number,
+  mes: number,
+): Promise<CerrarLiquidacionResult> {
+  const ctx = await resolverContexto(empleadaId);
+  let row = await buscarLiquidacionPorMes(empleadaId, anio, mes);
+
+  if (!row && mesFueraDeContrato(anio, mes, ctx)) {
+    return { ok: false, error: "MES_FUERA_DE_CONTRATO" };
+  }
+  if (row && row.estado === "CERRADA") {
+    return { ok: false, error: "LIQUIDACION_CERRADA" };
+  }
+  if (!row) {
+    row = await crearLiquidacion({ empleadaId, anio, mes });
+  }
+
+  const festivos = getHolidaysInMonth(anio, mes);
+  const novedades = await cargarNovedades(row.id);
+  const itemsSnapshot = await snapshotItemsAlCierre(empleadaId, novedades);
+
+  // Total a congelar: calculado en vivo con la configuración vigente y el snapshot
+  // de items recién sincronizado (RN-08/RN-09).
+  const desgloseAlCierre = desgloseDe(anio, mes, ctx, festivos, {
+    ...novedades,
+    items: itemsSnapshot.map((it) => ({
+      itemId: it.itemId,
+      nombre: it.nombre,
+      valorUnitario: it.valorUnitario,
+      cantidad: it.cantidad,
+    })),
+  });
+
+  const cerrada = await cerrarConCongelamiento(row.id, {
+    salarioBaseCongelado: ctx.salarioBase,
+    diasLaboralesCongelado: ctx.diasLaborales,
+    totalCongelado: desgloseAlCierre.total,
+    itemsSnapshot,
+  });
+
+  const novedadesCongeladas = await cargarNovedades(cerrada.id);
+  const ctxCongelado = contextoDeLiquidacion(cerrada, ctx);
+  return {
+    ok: true,
+    liquidacion: armarDto(cerrada, ctxCongelado, festivos, novedadesCongeladas),
+  };
+}
+
+// reabrirLiquidacion: devuelve una liquidación CERRADA a BORRADOR para corregirla
+// (RN-11). 409 si ya está en borrador; 409 si el mes está fuera de contrato.
+export async function reabrirLiquidacionDelMes(
+  empleadaId: string,
+  anio: number,
+  mes: number,
+): Promise<ReabrirLiquidacionResult> {
+  const ctx = await resolverContexto(empleadaId);
+  const row = await buscarLiquidacionPorMes(empleadaId, anio, mes);
+
+  if (!row && mesFueraDeContrato(anio, mes, ctx)) {
+    return { ok: false, error: "MES_FUERA_DE_CONTRATO" };
+  }
+  if (!row || row.estado !== "CERRADA") {
+    return { ok: false, error: "LIQUIDACION_BORRADOR" };
+  }
+
+  const reabierta = await reabrirLiquidacionRow(row.id);
+  const festivos = getHolidaysInMonth(anio, mes);
+  const novedades = await cargarNovedades(reabierta.id);
+  // Reabierta ⇒ BORRADOR ⇒ se recalcula en vivo con la configuración vigente.
+  return { ok: true, liquidacion: armarDto(reabierta, ctx, festivos, novedades) };
+}
+
+// eliminarLiquidacion: borra la liquidación del mes (y sus novedades en cascada).
+// 404 si no existe (RN-19; la confirmación es responsabilidad de la UI).
+export async function eliminarLiquidacionDelMes(
+  empleadaId: string,
+  anio: number,
+  mes: number,
+): Promise<EliminarLiquidacionResult> {
+  const row = await buscarLiquidacionPorMes(empleadaId, anio, mes);
+  if (!row) {
+    return { ok: false, error: "LIQUIDACION_NO_ENCONTRADA" };
+  }
+  await eliminarLiquidacionRow(row.id);
+  return { ok: true };
 }

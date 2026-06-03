@@ -113,6 +113,68 @@ export interface ReemplazoNovedades {
   notas?: string | null;
 }
 
+// Datos del cierre a congelar en la liquidación (RN-09). diasLaboralesCongelado
+// se persiste como JSON (array de DiaSemana). Los snapshots de cada item
+// (nombre/valorUnitario) se re-sincronizan con el valor vigente provisto.
+export interface CierreCongelamiento {
+  salarioBaseCongelado: number;
+  diasLaboralesCongelado: string[];
+  totalCongelado: number;
+  itemsSnapshot: ReemplazoItem[];
+}
+
+// Cierra la liquidación de forma atómica (RN-09): marca CERRADA, persiste los
+// campos congelados y re-sincroniza el snapshot de items al valor vigente del
+// cierre. Transacción para que el congelamiento sea todo-o-nada.
+export async function cerrarConCongelamiento(
+  liquidacionId: string,
+  cierre: CierreCongelamiento,
+): Promise<Liquidacion> {
+  return db.$transaction(async (tx) => {
+    await tx.liquidacionItem.deleteMany({ where: { liquidacionId } });
+    if (cierre.itemsSnapshot.length > 0) {
+      await tx.liquidacionItem.createMany({
+        data: cierre.itemsSnapshot.map((it) => ({
+          liquidacionId,
+          itemId: it.itemId,
+          nombre: it.nombre,
+          valorUnitario: it.valorUnitario,
+          cantidad: it.cantidad,
+        })),
+      });
+    }
+    return tx.liquidacion.update({
+      where: { id: liquidacionId },
+      data: {
+        estado: "CERRADA",
+        salarioBaseCongelado: cierre.salarioBaseCongelado,
+        diasLaboralesCongelado: cierre.diasLaboralesCongelado,
+        totalCongelado: cierre.totalCongelado,
+      },
+    });
+  });
+}
+
+// Reabre la liquidación (RN-11): vuelve a BORRADOR. El cálculo en borrador usa la
+// configuración vigente, así que los campos congelados dejan de leerse; se limpian
+// para no dejar datos obsoletos en la fila.
+export async function reabrirLiquidacionRow(liquidacionId: string): Promise<Liquidacion> {
+  return db.liquidacion.update({
+    where: { id: liquidacionId },
+    data: {
+      estado: "BORRADOR",
+      salarioBaseCongelado: null,
+      diasLaboralesCongelado: null,
+      totalCongelado: null,
+    },
+  });
+}
+
+// Elimina la liquidación; la cascada del schema borra inasistencias/items/montos.
+export async function eliminarLiquidacionRow(liquidacionId: string): Promise<void> {
+  await db.liquidacion.delete({ where: { id: liquidacionId } });
+}
+
 export async function reemplazarNovedades(
   liquidacionId: string,
   reemplazo: ReemplazoNovedades,
