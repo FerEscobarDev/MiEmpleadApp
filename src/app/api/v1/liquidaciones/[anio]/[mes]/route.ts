@@ -1,9 +1,17 @@
-import { resolverRol, stripNotas } from "@/features/auth/authorize";
+import {
+  resolverRol,
+  rechazarSiNoEmpleador,
+  stripNotas,
+} from "@/features/auth/authorize";
 import {
   errorResponse,
   validationErrorResponse,
 } from "@/features/config/application/api-error";
-import { obtenerLiquidacionDelMes } from "@/features/liquidacion/application/liquidacion-service";
+import {
+  obtenerLiquidacionDelMes,
+  actualizarLiquidacionDelMes,
+} from "@/features/liquidacion/application/liquidacion-service";
+import { actualizarLiquidacionInputSchema } from "@/features/liquidacion/application/schemas";
 
 // Frontera HTTP de la liquidación de un mes (architecture.md §2.2). Implementa
 // obtenerLiquidacion (GET) del contrato bajo /liquidaciones/{anio}/{mes}. Valida
@@ -14,6 +22,8 @@ import { obtenerLiquidacionDelMes } from "@/features/liquidacion/application/liq
 
 const NO_AUTORIZADO = "NO_AUTORIZADO";
 const MES_FUERA_DE_CONTRATO = "MES_FUERA_DE_CONTRATO";
+const LIQUIDACION_CERRADA = "LIQUIDACION_CERRADA";
+const INASISTENCIA_INVALIDA = "INASISTENCIA_INVALIDA";
 
 interface RouteContext {
   params: Promise<{ anio: string; mes: string }>;
@@ -67,6 +77,76 @@ export async function GET(
     return Response.json(cuerpo, { status: 200 });
   } catch (error) {
     console.error("Error en GET /api/v1/liquidaciones/[anio]/[mes]", error);
+    return errorResponse(500, "ERROR_INTERNO", "Error interno.");
+  }
+}
+
+export async function PUT(
+  request: Request,
+  context: RouteContext,
+): Promise<Response> {
+  // RN-13: la empleada (token) no puede actualizar la liquidación.
+  const rechazo = await rechazarSiNoEmpleador(request);
+  if (rechazo) {
+    return rechazo;
+  }
+
+  const contexto = await resolverRol(request);
+  if (!contexto) {
+    return errorResponse(401, NO_AUTORIZADO, "Identidad no válida.");
+  }
+
+  const { anio: anioRaw, mes: mesRaw } = await context.params;
+  const parsed = parsearMes(anioRaw, mesRaw);
+  if (!parsed) {
+    return validationErrorResponse({ anio: anioRaw, mes: mesRaw });
+  }
+
+  let payload: unknown;
+  try {
+    payload = await request.json();
+  } catch {
+    return validationErrorResponse({ body: "JSON inválido." });
+  }
+
+  const parsedBody = actualizarLiquidacionInputSchema.safeParse(payload);
+  if (!parsedBody.success) {
+    return validationErrorResponse(parsedBody.error.issues);
+  }
+
+  try {
+    const result = await actualizarLiquidacionDelMes(
+      contexto.empleadaId,
+      parsed.anio,
+      parsed.mes,
+      parsedBody.data,
+    );
+    if (!result.ok) {
+      if (result.error === "MES_FUERA_DE_CONTRATO") {
+        return errorResponse(
+          409,
+          MES_FUERA_DE_CONTRATO,
+          "El mes está fuera del periodo de contrato.",
+        );
+      }
+      if (result.error === "LIQUIDACION_CERRADA") {
+        return errorResponse(
+          409,
+          LIQUIDACION_CERRADA,
+          "La liquidación está cerrada y no puede editarse.",
+        );
+      }
+      return errorResponse(
+        409,
+        INASISTENCIA_INVALIDA,
+        "Alguna inasistencia no es válida (festivo, día no laboral o fuera de contrato).",
+        { invalidas: result.invalidas },
+      );
+    }
+    // El escritor es el empleador; las notas se devuelven íntegras.
+    return Response.json(result.liquidacion, { status: 200 });
+  } catch (error) {
+    console.error("Error en PUT /api/v1/liquidaciones/[anio]/[mes]", error);
     return errorResponse(500, "ERROR_INTERNO", "Error interno.");
   }
 }
