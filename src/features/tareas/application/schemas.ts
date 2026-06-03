@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { diaSemanaSchema } from "@/features/config/application/schemas";
+import { isIsoDate } from "@/features/config/application/date-iso";
 
 // Esquemas Zod de la frontera de tareas (architecture.md §5.4). La autoridad de
 // validación está en el backend. El enum DiaSemana se reutiliza del feature config
@@ -41,3 +42,36 @@ export type RutinaTareaInputDto = z.infer<typeof rutinaTareaInputSchema>;
 
 // DTO de entrada del PUT /tareas/rutina: un arreglo de tareas (reemplazo total).
 export const rutinaTareasInputSchema = z.array(rutinaTareaInputSchema);
+
+// Fecha ISO YYYY-MM-DD válida (rechaza fechas calendario imposibles). Reutiliza
+// isIsoDate (no duplica la validación de fecha del feature config).
+const isoDateString = z
+  .string()
+  .refine((value) => isIsoDate(value), {
+    message: "Fecha inválida (formato YYYY-MM-DD).",
+  });
+
+// Query `fecha` de obtenerTareasDelDia.
+export const fechaQuerySchema = isoDateString;
+
+// DTO MarcarTareaInput (PUT /tareas/cumplimiento).
+export const marcarTareaInputSchema = z.object({
+  fecha: isoDateString,
+  rutinaTareaId: z.string().min(1, "rutinaTareaId es obligatorio."),
+  hecha: z.boolean(),
+});
+
+export type MarcarTareaInputDto = z.infer<typeof marcarTareaInputSchema>;
+
+// Rango de fechas de obtenerHistoricoTareas: desde ≤ hasta (comparación
+// lexicográfica válida por el formato YYYY-MM-DD).
+export const rangoHistoricoSchema = z
+  .object({
+    desde: isoDateString,
+    hasta: isoDateString,
+  })
+  .refine((r) => r.desde <= r.hasta, {
+    message: "El rango es inválido: 'desde' no puede ser posterior a 'hasta'.",
+  });
+
+export type RangoHistoricoDto = z.infer<typeof rangoHistoricoSchema>;
