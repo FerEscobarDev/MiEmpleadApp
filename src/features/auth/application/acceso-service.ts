@@ -1,6 +1,8 @@
 import { buscarEmpleadorPorEmail } from "@/features/auth/data/empleador-repository";
-import { buscarEmpleadaPorEmpleador } from "@/features/config/data/empleada-repository";
-import { db } from "@/lib/db";
+import {
+  buscarEmpleadaPorEmpleador,
+  buscarEmpleadaPorId,
+} from "@/features/config/data/empleada-repository";
 import { generarTokenAcceso, hashTokenAcceso } from "@/features/auth/token";
 import {
   guardarEnlace,
@@ -77,10 +79,7 @@ export async function resolverEmpleadaPorToken(
   if (!enlace) {
     return null;
   }
-  const empleada = await db.empleada.findUnique({
-    where: { id: enlace.empleadaId },
-    select: { id: true, nombre: true },
-  });
+  const empleada = await buscarEmpleadaPorId(enlace.empleadaId);
   if (!empleada) {
     return null;
   }
