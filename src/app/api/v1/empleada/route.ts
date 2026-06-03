@@ -16,7 +16,10 @@ import {
 // (conventions.md §4). La identidad/rol se resolverán por la costura de auth en
 // Epic 4 (RN-13) sin reescribir este handler.
 
-export async function GET(): Promise<Response> {
+// El parámetro request no se usa en la lectura (la empleada se resuelve por la
+// costura de auth), pero se acepta por la firma estándar de los Route Handlers.
+export async function GET(_request?: Request): Promise<Response> {
+  void _request;
   try {
     const empleadaId = await getCurrentEmpleadaId();
     const empleada = await obtenerEmpleada(empleadaId);

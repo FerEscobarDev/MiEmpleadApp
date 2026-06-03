@@ -16,7 +16,10 @@ import {
 // acceso directo a Prisma (conventions.md §4). Autorización por rol diferida al
 // Epic 4 vía la costura de auth (RN-13).
 
-export async function GET(): Promise<Response> {
+// El parámetro request no se usa en la lectura (la empleada se resuelve por la
+// costura de auth), pero se acepta por la firma estándar de los Route Handlers.
+export async function GET(_request?: Request): Promise<Response> {
+  void _request;
   try {
     const empleadaId = await getCurrentEmpleadaId();
     const config = await obtenerConfiguracion(empleadaId);
