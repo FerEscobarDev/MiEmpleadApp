@@ -202,7 +202,7 @@ El núcleo del sistema es el **cálculo proporcional del pago** (valor-día sobr
   - **Operaciones del contrato (consume):** `obtenerRutinaTareas`, `actualizarRutinaTareas`, `obtenerTareasDelDia`, `marcarTarea`, `obtenerHistoricoTareas`.
   - **Specs estimados:** 2
 
-- [/] **Epic 8.7:** Vista de consulta de la empleada
+- [x] **Epic 8.7:** Vista de consulta de la empleada
   - **Dependencias:** Epic 7.1, Epic 4.2, Epic 8.3, Epic 8.5, Epic 8.6
   - **Descripción:** Vista de solo lectura por enlace: pago/calendario del mes (sin notas), menú del día, checklist con marcado, y recordatorio de cumpleaños.
   - **Reglas de negocio clave:** [RN-12 (sin notas), RN-13 (lectura + marcar), RN-20 (cumpleaños)](../01-requirements/business_requirements.md#reglas-de-negocio)
