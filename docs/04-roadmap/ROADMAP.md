@@ -174,7 +174,7 @@ El núcleo del sistema es el **cálculo proporcional del pago** (valor-día sobr
   - **Operaciones del contrato (consume):** `obtenerEmpleada`, `actualizarEmpleada`, `obtenerConfiguracion`, `actualizarConfiguracion`, `listarItemsAdicionales`, `crearItemAdicional`, `actualizarItemAdicional`, `eliminarItemAdicional`, `generarEnlaceAcceso`, `revocarEnlaceAcceso`.
   - **Specs estimados:** 3
 
-- [/] **Epic 8.3:** Liquidar mes (calendario visual)
+- [x] **Epic 8.3:** Liquidar mes (calendario visual)
   - **Dependencias:** Epic 7.1, Epic 5.1, Epic 5.2, Epic 8.2
   - **Descripción:** Selección de mes, calendario coloreado, registro de novedades, desglose destacado del total, y acciones de cerrar/reabrir.
   - **Reglas de negocio clave:** [RN-01–RN-09, RN-11, RN-16](../01-requirements/business_requirements.md#reglas-de-negocio)
