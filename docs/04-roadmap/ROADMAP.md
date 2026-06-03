@@ -149,7 +149,7 @@ El núcleo del sistema es el **cálculo proporcional del pago** (valor-día sobr
 ### Milestone 7: Frontend Foundation
 *Objetivo:* base de la UI: routing, layout, Design System como código y el cliente tipado del contrato. Incluye el **gate de aprobación del Design System** antes de construir cualquier página.
 
-- [ ] **Epic 7.1:** Frontend Foundation y Design System
+- [/] **Epic 7.1:** Frontend Foundation y Design System
   - **Dependencias:** Epic 1.1
   - **Descripción:** Routing/layout base, Design System como código (tokens + componentes base shadcn), ruta showcase `/dev/design-system` (aprobada por el usuario antes de las páginas), cliente tipado generado desde `api-contract.openapi.yaml`, y shell PWA.
   - **Reglas de negocio clave:** [Restricciones No Funcionales (idioma, moneda, PWA)](../01-requirements/business_requirements.md#restricciones-no-funcionales-de-negocio)
