@@ -43,7 +43,7 @@ El núcleo del sistema es el **cálculo proporcional del pago** (valor-día sobr
   - **Operaciones del contrato:** ninguna (no toca boundary HTTP).
   - **Specs estimados:** 2
 
-- [ ] **Epic 1.2:** Persistencia y Prisma
+- [/] **Epic 1.2:** Persistencia y Prisma
   - **Dependencias:** Epic 1.1
   - **Descripción:** Definir el schema Prisma inicial (todas las entidades de §4) con provider `sqlite`, configurar la base SQLite (archivo en volumen, modo WAL), migraciones y el cliente único `lib/db`. Como SQLite no soporta enums nativos en Prisma, los enums (estado, día de semana, periodicidad, tipo de día) se modelan como `String` y se validan en la frontera con Zod. Módulos de acceso a datos base por feature.
   - **Reglas de negocio clave:** [RN-09 (congelamiento), RN-10 (unicidad mes/año), RN-17 (zona horaria)](../01-requirements/business_requirements.md#reglas-de-negocio)
