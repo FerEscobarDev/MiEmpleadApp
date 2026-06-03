@@ -130,7 +130,7 @@ El núcleo del sistema es el **cálculo proporcional del pago** (valor-día sobr
 ### Milestone 6: Menú y Tareas (API)
 *Objetivo:* backend del menú de cocina (plantilla repetible) y de la rutina de tareas con marcado histórico.
 
-- [/] **Epic 6.1:** API Menú de cocina
+- [x] **Epic 6.1:** API Menú de cocina
   - **Dependencias:** Epic 3.1
   - **Descripción:** Configuración de comidas y periodicidad, y entradas de la plantilla (por semana del ciclo, día y comida).
   - **Reglas de negocio clave:** [RN-14 (plantilla repetible), RN-19 (comidas configurables)](../01-requirements/business_requirements.md#reglas-de-negocio)
