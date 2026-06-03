@@ -195,7 +195,7 @@ El núcleo del sistema es el **cálculo proporcional del pago** (valor-día sobr
   - **Operaciones del contrato (consume):** `obtenerMenu`, `actualizarConfiguracionMenu`, `actualizarMenu`.
   - **Specs estimados:** 2
 
-- [/] **Epic 8.6:** Tareas del día y rutina
+- [x] **Epic 8.6:** Tareas del día y rutina
   - **Dependencias:** Epic 7.1, Epic 6.2, Epic 8.2
   - **Descripción:** Editor de rutina por día de semana con horarios, checklist del día e histórico de cumplimiento.
   - **Reglas de negocio clave:** [RN-15](../01-requirements/business_requirements.md#reglas-de-negocio)
