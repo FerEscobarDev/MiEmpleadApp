@@ -36,6 +36,12 @@ services:
       AUTH_TRUST_HOST: "true"
       # URL pública real (dominio con HTTPS); la usan los enlaces de consulta.
       NEXT_PUBLIC_BASE_URL: "${NEXT_PUBLIC_BASE_URL:?define NEXT_PUBLIC_BASE_URL}"
+      # Credenciales para el bootstrap idempotente de la cuenta del empleador
+      # (entrypoint). Opcionales (default vacío): si no están, el alta se omite.
+      # Compose NO pasa al contenedor las variables del entorno que no se declaren
+      # aquí, aunque estén definidas en Dokploy; por eso se referencian explícitas.
+      EMPLEADOR_EMAIL: "${EMPLEADOR_EMAIL:-}"
+      EMPLEADOR_PASSWORD: "${EMPLEADOR_PASSWORD:-}"
     volumes:
       # Named volume montado en /data: persiste prod.db (+ -wal/-shm) entre redeploys.
       - miempleadapp-data:/data
