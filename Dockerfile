@@ -75,8 +75,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 
-# Script de arranque: crea el directorio del volumen, migra y lanza el server.
+# Script de arranque: crea el directorio del volumen, migra, hace bootstrap de la
+# cuenta del empleador (idempotente) y lanza el server.
 COPY --from=builder --chown=nextjs:nodejs /app/scripts/docker-entrypoint.sh ./docker-entrypoint.sh
+COPY --from=builder --chown=nextjs:nodejs /app/scripts/bootstrap-empleador.cjs ./scripts/bootstrap-empleador.cjs
 RUN chmod +x ./docker-entrypoint.sh
 
 # Punto de montaje del volumen SQLite, creado con propiedad del usuario no-root.

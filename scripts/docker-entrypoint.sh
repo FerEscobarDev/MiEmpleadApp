@@ -15,5 +15,11 @@ echo "[entrypoint] Aplicando migraciones Prisma (migrate deploy)…"
 # prisma migrate deploy es idempotente: no falla si ya están aplicadas (EC-2).
 node node_modules/prisma/build/index.js migrate deploy
 
+# Alta automática de la cuenta del empleador desde EMPLEADOR_EMAIL/PASSWORD
+# (idempotente por email; RN-13). No debe tumbar el arranque: el script sale 0
+# aunque falle, pero blindamos igual con `|| true`.
+echo "[entrypoint] Bootstrap de la cuenta del empleador…"
+node scripts/bootstrap-empleador.cjs || true
+
 echo "[entrypoint] Iniciando servidor Next.js standalone en el puerto ${PORT:-3000}…"
 exec node server.js

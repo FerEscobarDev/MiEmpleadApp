@@ -77,13 +77,31 @@ servicio en Dokploy y deja que Traefik termine TLS. Como la app corre detrás de
 proxy, mantén `AUTH_TRUST_HOST=true` para que Auth.js construya correctamente las
 URLs de callback.
 
-## 5. Seed de la cuenta del empleador (una sola vez)
+## 5. Cuenta del empleador
 
-No hay auto-registro público (RN-13): la cuenta del empleador se crea con el
-seed, **una única vez**, apuntando a la **misma** base de datos del volumen.
+No hay auto-registro público (RN-13): la cuenta del empleador se crea desde las
+variables `EMPLEADOR_EMAIL` / `EMPLEADOR_PASSWORD`.
 
-El seed usa `tsx` (devDependency), que **no** está en la imagen de runtime. Dos
-formas de ejecutarlo contra el `.db` del volumen:
+### 5.1. Automático al desplegar (recomendado)
+
+El entrypoint del contenedor ejecuta un **bootstrap idempotente**
+(`scripts/bootstrap-empleador.cjs`) tras aplicar las migraciones: si
+`EMPLEADOR_EMAIL` y `EMPLEADOR_PASSWORD` están definidas en el entorno del
+servicio y aún no existe un empleador con ese email, **lo crea** (contraseña
+hasheada con bcrypt + empleada/configuración por defecto). Es seguro en cada
+arranque: si la cuenta ya existe, no hace nada; si las variables no están, omite
+el alta sin tumbar el servidor.
+
+Por tanto, basta con definir `EMPLEADOR_EMAIL` / `EMPLEADOR_PASSWORD` en Dokploy y
+desplegar. Tras el primer arranque puedes **dejarlas o quitarlas** (si las quitas,
+el bootstrap simplemente se omite). Para **cambiar la contraseña** más adelante,
+no basta cambiar la variable (no se re-crea si el email ya existe): edita el
+registro o usa el script manual contra una BD limpia.
+
+### 5.2. Manual (alternativa)
+
+El seed `npm run seed:empleador` usa `tsx` (devDependency), que **no** está en la
+imagen de runtime. Dos formas de ejecutarlo contra el `.db` del volumen:
 
 **Opción 1 — contenedor efímero con dev deps (recomendado):**
 
