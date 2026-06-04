@@ -14,9 +14,16 @@ services:
     # Una sola réplica: ADR-002 prohíbe múltiples escritores sobre el mismo .db.
     deploy:
       replicas: 1
-    ports:
-      # Puerto del host : puerto del contenedor (configurable vía PORT).
-      - "${PORT:-3000}:3000"
+    # No se publica el puerto al host: Traefik (Dokploy) enruta el tráfico por la
+    # red interna hacia el puerto 3000 del contenedor (configura el Domain en la
+    # UI apuntando a Container Port 3000). Esto evita conflictos de puerto en el
+    # host y habilita el dominio/HTTPS vía reverse-proxy.
+    expose:
+      - "3000"
+    networks:
+      # Red de Traefik/Dokploy: imprescindible para que el proxy alcance el
+      # contenedor; sin ella el dominio devuelve 502 Bad Gateway.
+      - dokploy-network
     environment:
       NODE_ENV: production
       PORT: 3000
@@ -36,3 +43,9 @@ services:
 volumes:
   miempleadapp-data:
     name: miempleadapp-data
+
+networks:
+  # Red externa creada por Dokploy donde vive Traefik. Debe existir en el host
+  # (verifícalo con: docker network ls | grep dokploy).
+  dokploy-network:
+    external: true
