@@ -37,6 +37,11 @@ ENV NODE_ENV=production
 RUN npx prisma generate
 RUN npm run build
 
+# Poda devDependencies dejando SOLO las de producción. Conserva el CLI de Prisma
+# y su árbol transitivo completo (@prisma/config → effect/c12/…), necesario para
+# `prisma migrate deploy` en el runner, además del cliente generado (.prisma).
+RUN npm prune --omit=dev
+
 # ============================================================
 # Stage 3: runner — runtime mínimo, no-root
 # ============================================================
@@ -62,14 +67,13 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
-# Prisma para aplicar migraciones al arrancar: schema, migraciones, CLI y el
-# cliente/engine generados. El standalone ya traza @prisma/client, pero copiamos
-# explícitamente el cliente generado y el CLI para `prisma migrate deploy`.
+# Prisma para aplicar migraciones al arrancar: schema, migraciones y el árbol de
+# node_modules de producción (CLI + @prisma/config y sus deps transitivas como
+# `effect`, el cliente/engine generado en .prisma, y @prisma/client). Se copia el
+# node_modules de producción ya podado para que `prisma migrate deploy` resuelva
+# todas sus dependencias (el cherry-pick por carpetas dejaba fuera `effect` y cía).
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 
 # Script de arranque: crea el directorio del volumen, migra y lanza el server.
 COPY --from=builder --chown=nextjs:nodejs /app/scripts/docker-entrypoint.sh ./docker-entrypoint.sh
