@@ -79,6 +79,11 @@ COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nextjs:nodejs /app/scripts/docker-entrypoint.sh ./docker-entrypoint.sh
 RUN chmod +x ./docker-entrypoint.sh
 
+# Punto de montaje del volumen SQLite, creado con propiedad del usuario no-root.
+# Un named volume VACÍO hereda esta propiedad al montarse, de modo que `nextjs`
+# puede crear /data/prod.db y `prisma migrate deploy` no falla por permisos.
+RUN mkdir -p /data && chown nextjs:nodejs /data
+
 USER nextjs
 
 EXPOSE 3000
