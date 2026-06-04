@@ -154,14 +154,15 @@ export function NovedadesPanel({
             </ul>
           ) : null}
           <div className="flex flex-wrap items-end gap-md">
-            <Input
-              id="monto-descripcion"
-              label="Descripción del monto"
-              className="min-w-[160px] flex-1"
-              disabled={!editable}
-              value={descripcionMonto}
-              onChange={(e) => setDescripcionMonto(e.target.value)}
-            />
+            <div className="min-w-[160px] flex-1">
+              <Input
+                id="monto-descripcion"
+                label="Descripción del monto"
+                disabled={!editable}
+                value={descripcionMonto}
+                onChange={(e) => setDescripcionMonto(e.target.value)}
+              />
+            </div>
             <Input
               id="monto-valor"
               type="number"
